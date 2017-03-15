@@ -5,9 +5,9 @@ from astropy.io import ascii
 import coordinates
 
 
-def read_optical_catalog(target):
+def read_optical_catalog(optical_folder, target):
 
-    catalog='/Users/jrneeley/CRRP/OpticalCatalogs/'+target+'.dat'
+    catalog=optical_folder+target+'.dat'
 
     print "Reading optical catalog for "+target+"..."
     data = ascii.read(catalog, delimiter=' ', data_start=1)

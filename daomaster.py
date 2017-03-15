@@ -6,13 +6,13 @@ import re
 import glob
 import os
 
-def daomaster_init(matchfile):
+def daomaster_init(dao_folder, matchfile):
 
 ## Clean up previous runs
     magfile=re.sub(".mch", ".mag", matchfile)
     if (os.path.isfile(magfile)):
             os.remove(magfile)
-    daomaster = pexpect.spawn('/Users/jrneeley/Daophot/daomaster')
+    daomaster = pexpect.spawn(dao_folder+'daomaster')
     daomaster.logfile = sys.stdout
 
     daomaster.expect("File with list of input files")

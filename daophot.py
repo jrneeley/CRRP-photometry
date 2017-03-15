@@ -8,7 +8,7 @@ import shutil
 from astropy.io import fits
 import sys
 
-def init_phot(target, fitsfile):
+def init_phot(dao_folder, target, fitsfile):
 
 	temp=re.sub(".fits","", fitsfile)
 
@@ -24,7 +24,8 @@ def init_phot(target, fitsfile):
 
 ## Running daophot
 
-	daophot = pexpect.spawn('/Users/jrneeley/Daophot/daophot')
+	daophot = pexpect.spawn(dao_folder+'daophot')
+	#daophot.logfile = sys.stdout
 
 # attach the image
 	daophot.expect("Command:")
@@ -78,7 +79,7 @@ def find_psf(target, fitsfile):
 	print "Working on " + image
 
 #Running daophot
-	daophot = pexpect.spawn('/Users/jrneeley/Daophot/daophot')
+	daophot = pexpect.spawn(dao_folder+'daophot')
 	daophot.logfile = sys.stdout
 # attach the image
 	daophot.expect("Command:")

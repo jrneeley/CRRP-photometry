@@ -19,6 +19,9 @@ channel = sys.argv[2]
 file_list = glob.glob('all/'+channel+'*[0-9].fits')
 dn_list = glob.glob('all/'+channel+'*_dn.fits')
 
+# Identify path to DAOPHOT install
+dao_folder, optical_folder = daophot_setup.folder()
+# Set daophot.opt file to appropriate channel
 daophot_setup.set_opt_files(channel)
 
 
@@ -52,7 +55,7 @@ if (start <= 0):
 ## Run DAOPHOT
 	print "Starting DAOPHOT"
 	for image in dn_list:
-		daophot.init_phot(target_name, image)
+		daophot.init_phot(dao_folder, target_name, image)
 
 	print "Initial aperture photometry complete."
 
@@ -61,38 +64,40 @@ if (start <= 1):
 	master_frame = raw_input("Identify master frame: ")
 #	daophot.find_psf(master_frame)
 ## Copy this PSF to each epoch
-	shutil.copy(master_frame, 'master_'+channel+'.fits')
+
 	master_file = re.sub(".fits",".psf",master_frame)
 	master_list = re.sub(".fits",".lst",master_frame)
-	master_psf='master_'+channel+'.psf'
-	shutil.copy(master_file, master_psf)
-	shutil.copy(master_list, 'master_'+channel+'.lst')
+	shutil.copy(master_file, 'master.psf')
+
+	shutil.copy(master_frame, re.sub("all","master",master_frame))
+	shutil.copy(master_file, re.sub("all","master",master_file))
+	shutil.copy(master_list, re.sub("all", "master", master_list))
 
 	for file in dn_list:
 		psfname = re.sub(".fits",".psf", file)
-		shutil.copy(master_psf, psfname)
+		shutil.copy('master.psf', psfname)
 if (start <= 2):
 ## Run ALLSTAR
 	for file in dn_list:
-		allstar.allstar_init(target_name, file)
+		allstar.allstar_init(dao_folder, target_name, file)
 	print "ALLSTAR complete."
 
 if (start <= 3):
 ## Run DAOMATCH
 ## You may want to check the .mch files after this step
-	daomatch.daomatch_init(channel, target_name, fields, num_fields)
+	daomatch.daomatch_init(dao_folder, channel, target_name, fields, num_fields)
 	print "DAOMATCH complete."
 
 ## Run DAOMASTER
 if (start <= 4):
 	for x in range(0,num_fields):
 		print "Working on field "+ str(x+1)
-		daomaster.daomaster_init(channel+"_field"+str(x+1)+".mch")
-
+		daomaster.daomaster_init(dao_folder, channel+"_field"+str(x+1)+".mch")
+sys.exit("Manual stop.")
 ## Find appropriate window in source catalog
 if (start <=5):
 
-	ids, xcat, ycat, v_mags, ra, dec = optical.read_optical_catalog(target_name)
+	ids, xcat, ycat, v_mags, ra, dec = optical.read_optical_catalog(optical_folder, target_name)
 
 	for ind in range(0,num_fields):
 		print "Calculating field " + str(ind+1)+ " boundaries..."

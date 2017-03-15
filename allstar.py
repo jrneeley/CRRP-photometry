@@ -10,7 +10,7 @@ from astropy.io import fits
 import sys
 
 
-def allstar_init(target, fitsfile):
+def allstar_init(dao_folder, target, fitsfile):
 
 	temp=re.sub(".fits","", fitsfile)
 
@@ -25,8 +25,8 @@ def allstar_init(target, fitsfile):
         print "Working on " + image
 
 ## Running ALLSTAR
-	allstar = pexpect.spawn('/Users/jrneeley/Daophot/allstar')
-	allstar.logfile = sys.stdout
+	allstar = pexpect.spawn(dao_folder+'allstar')
+	#allstar.logfile = sys.stdout
 
 	allstar.expect("OPT")
 	allstar.sendline("")

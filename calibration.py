@@ -21,10 +21,6 @@ def find_cal_stars(target, channel):
     for star in psf_stars:
         try:
             index_match = star_ids.index(str(star))
-        #    mag_match = mags[index_match]
-        #    mags_irac_only = mag_match[5:len(mag_match)-2:2]
-        #    err_irac_only = mag_match[6:len(mag_match)-2:2]
-        #    f_num = np.arange(len(mags_irac_only))
 
         except ValueError:
             bad_index.append(np.argwhere(psf_stars == star))
@@ -94,5 +90,3 @@ def find_zp(psf_stars, channel):
     print np.mean(zp), np.std(zp_er)
     mp.plot(avg_mag, zp, 'ro')
     mp.show()
-
-

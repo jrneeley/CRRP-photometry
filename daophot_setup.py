@@ -8,6 +8,10 @@ import matplotlib.pyplot as mp
 import sys
 
 
+def folder():
+	daophot_folder = raw_input("Enter path to Daophot executables: ")
+	optical_folder = raw_input("Enter path to optical catalogs: ")
+	return daophot_folder, optical_folder
 
 def spitzer_flux2dn(image, newname=""):
 	if (newname == ""):
