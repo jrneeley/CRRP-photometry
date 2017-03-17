@@ -7,12 +7,23 @@ import optical
 from astropy.io import ascii
 import math
 
+def find_cal_star_coords(target, channel):
+    optical_folder = '/Users/Jill/CRRP/OpticalCatalogs/'
+    #read in lst file of calibration stars
+    psf_stars, psf_x, psf_y = read_dao.read_lst(channel+'_cal.lst')
+
+    cat_ids, x, y, v, ra, dec = optical.read_optical_catalog(optical_folder, target)
+    for star in psf_stars:
+        index_match = np.argwhere(cat_ids == star)
+        cal_ra = ra[index_match]
+        cal_dec = dec[index_match]
+        print star, cal_ra, cal_dec
 
 def find_cal_stars(target, channel):
     #identify calibration stars
 
     #read in lst file of calibration stars
-    psf_stars, psf_x, psf_y = read_dao.read_lst('test_'+channel+'.lst')
+    psf_stars, psf_x, psf_y = read_dao.read_lst(channel+'_cal.lst')
     # read in raw file with PSF photometry in all frames
     star_ids, mags = read_dao.read_raw('optical_alf.raw')
 
@@ -28,13 +39,6 @@ def find_cal_stars(target, channel):
     psf_stars = np.delete(psf_stars, bad_index)
     print 'Using '+str(len(psf_stars))+' calibration stars.'
 
-    #Find calibration stars in optical catalog to get RA/Dec
-#    cat_ids, x, y, v, ra, dec = optical.read_optical_catalog(target)
-#    for star in psf_stars:
-#        index_match = np.argwhere(cat_ids == star)
-#        cal_ra = ra[index_match]
-#        cal_dec = dec[index_match]
-#        print star, cal_ra, cal_dec
 
     return psf_stars
 def find_zp(psf_stars, channel):
@@ -81,12 +85,29 @@ def find_zp(psf_stars, channel):
         zp_er.append(np.nanstd(residual))
         avg_mag.append(np.nanmean(ap_mag))
 
+
+
     #    hist, bins = np.histogram(residual)
     #    width = 0.7 * (bins[1] - bins[0])
     #    center = (bins[:-1] + bins[1:]) / 2
     #    mp.bar(center, hist, align='center')
     #    mp.bar(bins, hist)
     #    mp.show()
-    print np.mean(zp), np.std(zp_er)
-    mp.plot(avg_mag, zp, 'ro')
+    keep_zp = []
+    keep_zp_er = []
+    keep_avg_mag = []
+
+    if channel == 'I1':
+        sat_limit = 10.1
+    if channel == 'I2':
+        sat_limit = 9.9
+    for ind in range(len(avg_mag)):
+        if avg_mag[ind] > sat_limit:
+            keep_zp.append(zp[ind])
+            keep_zp_er.append(zp_er[ind])
+            keep_avg_mag.append(avg_mag[ind])
+
+    print np.mean(keep_zp), np.std(keep_zp_er)
+    mp.plot(avg_mag, zp, 'ro', keep_avg_mag, keep_zp, 'bo')
+#    mp.plot(keep_avg_mag, keep_zp, 'bo')
     mp.show()
