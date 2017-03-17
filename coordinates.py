@@ -58,9 +58,9 @@ def radec2pix(target, xmin, xmax, ymin, ymax, x, y, ra, dec):
 
     return(cat_xmin, cat_xmax, cat_ymin, cat_ymax)
 
+# Convert coordinates in sexadecimal
 def hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s):
 
-    ra = 15*(ra_h+ra_m/60.+ra_s/3600.)
     if len(dec_d) == 1 :
         if dec_d < 0:
             dec = dec_d - dec_m/60. - dec_s/3600.
@@ -73,4 +73,11 @@ def hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s):
                 dec.append(dec_d[ind] - dec_m[ind]/60. - dec_s[ind]/3600.)
             if dec_d[ind] > 0:
                 dec.append(dec_d[ind] + dec_m[ind]/60. + dec_s[ind]/3600.)
+    if len(ra_h) > 1:
+        ra = []
+        for ind in range(0,len(ra_h)):
+            ra.append(15.*(ra_h[ind]+ra_m[ind]/60.+ra_s[ind]/3600.))
+    if len(ra_h) == 1:
+        ra = 15*(ra_h+ra_m/60.+ra_s/3600.)
+
     return ra, dec

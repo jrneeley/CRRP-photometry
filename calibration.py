@@ -7,23 +7,31 @@ import optical
 from astropy.io import ascii
 import math
 
-def find_cal_star_coords(target, channel):
-    optical_folder = '/Users/Jill/CRRP/OpticalCatalogs/'
+def find_cal_star_coords(optical_folder, target, channel):
+#    optical_folder = '/Users/Jill/CRRP/OpticalCatalogs/'
     #read in lst file of calibration stars
-    psf_stars, psf_x, psf_y = read_dao.read_lst(channel+'_cal.lst')
+#    psf_stars, psf_x, psf_y = read_dao.read_lst(channel+'_cal.lst')
+    psf_stars, psf_mags = read_dao.read_alf(channel+'.alf')
 
+    args = np.argsort(psf_mags)
+    psf_mags = psf_mags[args]
+    psf_stars = psf_stars[args]
+#    cal_ra = []
+#    cal_dec = []
     cat_ids, x, y, v, ra, dec = optical.read_optical_catalog(optical_folder, target)
     for star in psf_stars:
         index_match = np.argwhere(cat_ids == star)
-        cal_ra = ra[index_match]
-        cal_dec = dec[index_match]
-        print star, cal_ra, cal_dec
+#        cal_ra.append(ra[index_match])
+#        cal_dec.append(dec[index_match])
+        if len(index_match):
+            print star, ra[index_match], dec[index_match]
 
 def find_cal_stars(target, channel):
     #identify calibration stars
 
     #read in lst file of calibration stars
-    psf_stars, psf_x, psf_y = read_dao.read_lst(channel+'_cal.lst')
+#    psf_stars, psf_x, psf_y = read_dao.read_lst(channel+'_cal.lst')
+    psf_stars, psf_m = read_dao.read_alf(channel+'.alf')
     # read in raw file with PSF photometry in all frames
     star_ids, mags = read_dao.read_raw('optical_alf.raw')
 
@@ -58,7 +66,7 @@ def find_zp(psf_stars, channel):
         f_num = np.arange(len(psf_mag)/2)
 
         # Find aperture photometry
-        ap_phot = 'lcvs/'+channel+'_'+str(star)+'.txt'
+        ap_phot = 'lcvs/with_corrections/'+channel+'_'+str(star)+'.txt'
         data = ascii.read(ap_phot, delimiter=' ')
         aor = data['col1']
         frame = data['col2']
@@ -84,8 +92,11 @@ def find_zp(psf_stars, channel):
         zp.append(np.nanmean(residual))
         zp_er.append(np.nanstd(residual))
         avg_mag.append(np.nanmean(ap_mag))
-
-
+        good_values = residual[~np.isnan(residual)]
+        bin_num = np.sqrt(len(good_values))
+        #print bin_num
+        #n, bins, patches = mp.hist(good_values, bins=bin_num)
+        #mp.show()
 
     #    hist, bins = np.histogram(residual)
     #    width = 0.7 * (bins[1] - bins[0])
