@@ -57,6 +57,8 @@ def find_zp(psf_stars, channel):
     zp = []
     zp_er = []
     avg_mag = []
+    avg_mag_er = []
+    skipped = 0
     for star in psf_stars:
         # Find PSF photometry
         index_match = star_ids.index(str(star))
@@ -66,59 +68,87 @@ def find_zp(psf_stars, channel):
         f_num = np.arange(len(psf_mag)/2)
 
         # Find aperture photometry
-        ap_phot = 'lcvs/with_corrections/'+channel+'_'+str(star)+'.txt'
+        ap_phot = 'lcvs/'+channel+'_'+str(star)+'.txt'
         data = ascii.read(ap_phot, delimiter=' ')
         aor = data['col1']
         frame = data['col2']
-        ap_mag = data['col3']
-        ap_err = data['col4']
+        try:
+            ap_mag = np.array(data['col3'], dtype='f')
+            ap_err = np.array(data['col4'], dtype='f')
+        except:
+            skipped += 1
+            continue
+        # Remove some bad aperture photometry mags
+        median_mag = np.nanmedian(ap_mag)
+        diff = abs(ap_mag - median_mag)
+        bad_phot = np.argwhere(diff > 3*np.nanstd(ap_mag))
+        ap_mag[bad_phot] = float('NaN')
 
-        ap_mag = np.array(ap_mag, dtype='f')
-        ap_err = np.array(ap_err, dtype='f')
-        I1_psf_mag = np.array(psf_mag[0:len(psf_mag)/2], dtype='f')
-        I1_psf_err = np.array(psf_err[0:len(psf_err)/2], dtype='f')
-        I2_psf_mag = np.array(psf_mag[len(psf_mag)/2:], dtype='f')
-        I2_psf_err = np.array(psf_err[len(psf_err)/2:], dtype='f')
         if channel == 'I1':
-            residual = ap_mag - I1_psf_mag
-            no_match = np.argwhere(abs(residual) > 10.0)
-            residual[no_match] = float('NaN')
+            psf_mag = np.array(psf_mag[0:len(psf_mag)/2], dtype='f')
+            psf_err = np.array(psf_err[0:len(psf_err)/2], dtype='f')
+            psf_mag[psf_mag > 90] = float('NaN')
         #    res_err = math.sqrt(ap_err**2 + I1_psf_err**2)
         if channel == 'I2':
-            residual = ap_mag - I2_psf_mag
-            no_match = np.argwhere(abs(residual) > 10.0)
-            residual[no_match] = float('NaN')
-        #    res_err = math.sqrt(ap_err**2 + I2_psf_err**2)
+            psf_mag = np.array(psf_mag[len(psf_mag)/2:], dtype='f')
+            psf_err = np.array(psf_err[len(psf_err)/2:], dtype='f')
+
+        residual = ap_mag - psf_mag
+
+
+    #    if np.nanstd(ap_mag) < 0.1:
+    #        mp.plot(f_num, residual, 'ro')
+    #        mp.show()
         zp.append(np.nanmean(residual))
         zp_er.append(np.nanstd(residual))
         avg_mag.append(np.nanmean(ap_mag))
-        good_values = residual[~np.isnan(residual)]
-        bin_num = np.sqrt(len(good_values))
-        #print bin_num
-        #n, bins, patches = mp.hist(good_values, bins=bin_num)
-        #mp.show()
+        avg_mag_er.append(np.nanstd(ap_mag))
 
-    #    hist, bins = np.histogram(residual)
-    #    width = 0.7 * (bins[1] - bins[0])
-    #    center = (bins[:-1] + bins[1:]) / 2
-    #    mp.bar(center, hist, align='center')
-    #    mp.bar(bins, hist)
+    #    good_values = residual[~np.isnan(residual)]
+    #    bin_num = np.sqrt(len(good_values))
+    #    print bin_num
+    #    n, bins, patches = mp.hist(good_values, bins=bin_num)
     #    mp.show()
+
+
+    print 'Skipped '+str(skipped)+' stars.'
+
+
+
+    #mp.plot(avg_mag, avg_mag_er, 'ro')
+    #mp.show()
+
     keep_zp = []
     keep_zp_er = []
     keep_avg_mag = []
 
     if channel == 'I1':
         sat_limit = 10.1
+        err_limit = 0.1
     if channel == 'I2':
         sat_limit = 9.9
+        err_limit = 0.1
     for ind in range(len(avg_mag)):
-        if avg_mag[ind] > sat_limit:
+        #if avg_mag[ind] > sat_limit:
+        if avg_mag_er[ind] < err_limit:
             keep_zp.append(zp[ind])
             keep_zp_er.append(zp_er[ind])
             keep_avg_mag.append(avg_mag[ind])
+#    keep_zp = zp[avg_mag_er < err_limit]
+#    keep_zp_er = zp[avg_mag_er < err_limit]
+#    keep_avg_mag = zp[avg_mag_er < err_limit]
 
-    print np.mean(keep_zp), np.std(keep_zp_er)
+    linex = [sat_limit,20]
+    liney = [np.nanmedian(keep_zp), np.nanmedian(keep_zp)]
+    print np.nanmean(keep_zp), np.nanstd(keep_zp_er)
     mp.plot(avg_mag, zp, 'ro', keep_avg_mag, keep_zp, 'bo')
+    mp.plot(linex, liney, 'k-')
 #    mp.plot(keep_avg_mag, keep_zp, 'bo')
+    mp.show()
+
+    cutoff = np.nanmedian(keep_zp)
+    final_zp = keep_zp[keep_zp < cutoff]
+    final_avg_mag = avg_mag[keep_zp < cutoff]
+
+    mp.plot(final_avg_mag, final_zp, 'ro')
     mp.show()
