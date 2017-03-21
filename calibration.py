@@ -16,15 +16,18 @@ def find_cal_star_coords(optical_folder, target, channel):
     args = np.argsort(psf_mags)
     psf_mags = psf_mags[args]
     psf_stars = psf_stars[args]
-#    cal_ra = []
-#    cal_dec = []
+    cal_ra = []
+    cal_dec = []
+    stars = []
     cat_ids, x, y, v, ra, dec = optical.read_optical_catalog(optical_folder, target)
     for star in psf_stars:
         index_match = np.argwhere(cat_ids == star)
-#        cal_ra.append(ra[index_match])
-#        cal_dec.append(dec[index_match])
         if len(index_match):
-            print star, ra[index_match], dec[index_match]
+            stars.append(star)
+            cal_ra.append(ra[index_match])
+            cal_dec.append(dec[index_match])
+
+    ascii.write([stars, cal_ra, cal_dec], channel+'_cal_stars.txt')
 
 def find_cal_stars(target, channel):
     #identify calibration stars
