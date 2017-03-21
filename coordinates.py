@@ -44,12 +44,12 @@ def radec2pix(target, xmin, xmax, ymin, ymax, x, y, ra, dec):
 # it is slow to read the catalog multiple times. Change to read only once in the future.
 #    ids, x, y, v_mags, ra, dec = optical.read_optical_catalog_old(target)
 
-    index_xmin = ra.searchsorted(xmin)
-    index_xmax = ra.searchsorted(xmax)
+    index_xmin = np.searchsorted(ra, xmin)
+    index_xmax = np.searchsorted(ra, xmax)
     dec2 = np.sort(dec)
     y2 = y[np.argsort(dec)]
-    index_ymin = dec2.searchsorted(ymin)
-    index_ymax = dec2.searchsorted(ymax)
+    index_ymin = np.searchsorted(dec2, ymin)
+    index_ymax = np.searchsorted(dec2, ymax)
 
     cat_xmin = x[index_xmin]
     cat_xmax = x[index_xmax]

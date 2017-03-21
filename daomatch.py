@@ -28,7 +28,7 @@ def daomatch_init(dao_folder, channel, target, fields, num_fields):
         img_list = list(fields[ind])
         for ii in range(0,len(img_list)):
             img_list[ii] = re.sub("all/", target+":", img_list[ii])
-            img_list[ii] = re.sub('.fits', '.als', img_list[ii])
+            img_list[ii] = re.sub('.fits', '_dn.als', img_list[ii])
 ## run DAOMATCH on on fields
         daomatch = pexpect.spawn(dao_folder+'daomatch')
         daomatch.logfile = sys.stdout

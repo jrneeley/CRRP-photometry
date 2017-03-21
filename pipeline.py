@@ -93,7 +93,7 @@ if (start <= 4):
 	for x in range(0,num_fields):
 		print "Working on field "+ str(x+1)
 		daomaster.daomaster_init(dao_folder, channel+"_field"+str(x+1)+".mch")
-sys.exit("Manual stop.")
+
 ## Find appropriate window in source catalog
 if (start <=5):
 
