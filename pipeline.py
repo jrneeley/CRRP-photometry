@@ -19,8 +19,11 @@ channel = sys.argv[2]
 file_list = glob.glob('all/'+channel+'*[0-9].fits')
 dn_list = glob.glob('all/'+channel+'*_dn.fits')
 
-# Identify path to DAOPHOT install
-dao_folder, optical_folder = daophot_setup.folder()
+# Identify relevant paths
+dao_folder = '/Users/jrneeley/Daophot/'
+optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
+#dao_folder, optical_folder = daophot_setup.folder()
+
 # Set daophot.opt file to appropriate channel
 daophot_setup.set_opt_files(channel)
 

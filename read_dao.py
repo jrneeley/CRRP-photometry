@@ -70,19 +70,32 @@ def read_nmg(nmg_file):
 
 def read_lst(lst_file):
 
-    data = ascii.read(lst_file, delimiter=' ', data_start=2)
+    dtype1 = np.dtype([('id', 'i8'), ('x', 'f8'), ('y', 'f8')])
+    data = np.loadtxt(lst_file, dtype = dtype1, usecols=(0,1,2), skiprows=3)
 
-    ids = np.array(data['col1'])
-    x = np.array(data['col2'])
-    y = np.array(data['col3'])
+    ids = data['ids']
+    x = data['x']
+    y = data['y']
+
+#    data = ascii.read(lst_file, delimiter=' ', data_start=2)
+#    ids = np.array(data['col1'])
+#    x = np.array(data['col2'])
+#    y = np.array(data['col3'])
 
     return ids, x, y
 
 def read_alf(alf_file):
 
-    data = ascii.read(alf_file, delimiter=' ', data_start=2)
+    dtype1 = np.dtype([('id', 'i8'), ('mag', 'f6'), ('err', 'f6')])
+    data = np.loadtxt(alf_file, dtype=dtype1, usecols=(0,3,4), skiprows=3)
 
-    ids = np.array(data['col1'])
-    mag = np.array(data['col4'])
+    ids = data['id']
+    mag = data['mag']
+    err = data['err']
 
-    return ids, mag
+#    data = ascii.read(alf_file, delimiter=' ', data_start=2)
+
+#    ids = np.array(data['col1'])
+#    mag = np.array(data['col4'])
+
+    return ids, mag, err

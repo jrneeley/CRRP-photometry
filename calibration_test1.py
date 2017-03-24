@@ -6,59 +6,12 @@ import numpy as np
 import optical
 from astropy.io import ascii
 import math
-import coordinates
 
-def find_stars_in_cat(optical_folder, target, channel):
-
-    cat_ids, x, y, ra, dec = optical.read_optical_catalog(optical_folder, target)
-
-    dtype1 = np.dtype([('ra_h', 'i2'), ('ra_m', 'i2'), ('ra_s', 'f6'), ('dec_d', 'i3'), ('dec_m', 'i2'), ('dec_s', 'f5')])
-    data = np.loadtxt(channel+'.reg', dtype=dtype1)
-    ra_h = data['ra_h']
-    ra_m = data['ra_m']
-    ra_s = data['ra_s']
-    dec_d = data['dec_d']
-    dec_m = data['dec_m']
-    dec_s = data['dec_s']
-
-    cal_ra, cal_dec = coordinates.hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s)
-
-
-    ra1 = np.radians(ra)
-    dec1 = np.radians(dec)
-    id_match = []
-    ra_match = []
-    dec_match = []
-    for obj in range(0,len(cal_ra)):
-        ra2 = np.radians(cal_ra[obj])
-        dec2 = np.radians(cal_dec[obj])
-        x1 = np.cos(dec1)*np.cos(ra1)
-        y1 = np.cos(dec1)*np.sin(ra1)
-        z1 = np.sin(dec1)
-        x2 = np.cos(dec2)*np.cos(ra2)
-        y2 = np.cos(dec2)*np.sin(ra2)
-        z2 = np.sin(dec2)
-
-        dist = np.sqrt( (x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
-        dist = np.degrees(dist)*3600.
-
-        neighbors = dist[dist < 3.6]
-        if len(neighbors) == 1:
-            ind_match = np.argmin(dist)
-
-            id_match.append(cat_ids[ind_match])
-            ra_match.append(ra[ind_match])
-            dec_match.append(dec[ind_match])
-
-
-    print len(id_match)
-
-
-    np.savetxt(channel+'_cal_star.txt', np.c_[id_match, ra_match, dec_match], fmt='%i %f %f')
 def find_cal_star_coords(optical_folder, target, channel):
 #    optical_folder = '/Users/Jill/CRRP/OpticalCatalogs/'
     #read in lst file of calibration stars
-    #psf_stars, psf_mags, psf_errs = read_dao.read_alf(channel+'.alf')
+    psf_stars, psf_x, psf_y = read_dao.read_lst(channel+'_cal.lst')
+#    psf_stars, psf_mags = read_dao.read_alf(channel+'.alf')
 
     args = np.argsort(psf_mags)
     psf_mags = psf_mags[args]
@@ -66,7 +19,7 @@ def find_cal_star_coords(optical_folder, target, channel):
     cal_ra = []
     cal_dec = []
     stars = []
-    cat_ids, x, y, ra, dec = optical.read_optical_catalog(optical_folder, target)
+    cat_ids, x, y, v, ra, dec = optical.read_optical_catalog(optical_folder, target)
     for star in psf_stars:
         index_match = np.argwhere(cat_ids == star)
         if len(index_match):
@@ -74,17 +27,14 @@ def find_cal_star_coords(optical_folder, target, channel):
             cal_ra.append(ra[index_match])
             cal_dec.append(dec[index_match])
 
-    np.savetxt(channel+'_cal_stars.txt', np.c_[stars, cal_ra, cal_dec], fmt='%i %f %f')
-
+    ascii.write([stars, cal_ra, cal_dec], channel+'_cal_stars.txt')
 
 def find_cal_stars(target, channel):
     #identify calibration stars
 
     #read in lst file of calibration stars
-#    psf_stars, psf_x, psf_y = read_dao.read_lst('master_'+channel+'.lst')
-#    psf_stars, psf_m, psf_e = read_dao.read_alf(channel+'.alf')
-    psf_stars = np.loadtxt(channel+'_cal_star.txt', usecols=(0,), dtype='i8')
-    print psf_stars
+    psf_stars, psf_x, psf_y = read_dao.read_lst('master_'+channel+'.lst')
+#    psf_stars, psf_m = read_dao.read_alf(channel+'.alf')
     # read in raw file with PSF photometry in all frames
     star_ids, mags = read_dao.read_raw('optical-'+channel+'-alf.raw')
 
@@ -120,24 +70,17 @@ def find_zp(psf_stars, channel):
         psf_mag = np.array(mag_match[5:len(mag_match)-2:2], dtype='f')
         psf_err = np.array(mag_match[6:len(mag_match)-2:2], dtype='f')
         f_num = np.arange(len(psf_mag)/2)
-        if star < 5000000:
-            try:
-                # Find aperture photometry
-                ap_phot = 'lcvs/'+channel+'_'+str(star)+'.txt'
-                dtype1 = np.dtype([('mag', 'f7'), ('err', 'f6')])
-                data = np.loadtxt(ap_phot, dtype=dtype1, usecols=(2,3))
-#        data = ascii.read(ap_phot, delimiter=' ')
-#        aor = data['col1']
-#        frame = data['col2']
 
-                ap_mag=data['mag']
-                ap_err=data['err']
-            #ap_mag = np.array(data['col3'], dtype='f')
-            #ap_err = np.array(data['col4'], dtype='f')
-            except:
-                skipped += 1
-                continue
-        else:
+        # Find aperture photometry
+        ap_phot = 'lcvs/psf_stars/'+channel+'_'+str(star)+'.txt'
+        data = ascii.read(ap_phot, delimiter=' ')
+        aor = data['col1']
+        frame = data['col2']
+        try:
+            ap_mag = np.array(data['col3'], dtype='f')
+            ap_err = np.array(data['col4'], dtype='f')
+        except:
+            skipped += 1
             continue
         # Remove some bad aperture photometry mags
         median_mag = np.nanmedian(ap_mag)
@@ -208,16 +151,16 @@ def find_zp(psf_stars, channel):
 #    mp.plot(keep_avg_mag, keep_zp, 'bo')
     mp.show()
 
-#    cutoff = np.nanmedian(keep_zp)
+    cutoff = np.nanmedian(keep_zp)
 
-#    final_zp = []
-#    final_avg_mag = []
+    final_zp = []
+    final_avg_mag = []
 
-#    for ind in range(len(keep_zp)):
-#        if keep_zp[ind] > cutoff:
-#            final_zp.append(keep_zp[ind])
-#            final_avg_mag.append(keep_avg_mag[ind])
+    for ind in range(len(keep_zp)):
+        if keep_zp[ind] > cutoff:
+            final_zp.append(keep_zp[ind])
+            final_avg_mag.append(keep_avg_mag[ind])
 
 
-#    mp.plot(final_avg_mag, final_zp, 'ro')
-#    mp.show()
+    mp.plot(final_avg_mag, final_zp, 'ro')
+    mp.show()

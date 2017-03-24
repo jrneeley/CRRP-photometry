@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import sys
-import glob
+#import glob
 import numpy as np
-from astropy.io import ascii
+#from astropy.io import ascii
 from astropy.wcs import WCS
 import optical
 
@@ -39,10 +39,8 @@ def find_coord_window(img_list):
 
     return(bxmin, bxmax, bymin, bymax)
 
-
+# Convert celestial coordinates to pixels using optical catalog
 def radec2pix(target, xmin, xmax, ymin, ymax, x, y, ra, dec):
-# it is slow to read the catalog multiple times. Change to read only once in the future.
-#    ids, x, y, v_mags, ra, dec = optical.read_optical_catalog_old(target)
 
     index_xmin = np.searchsorted(ra, xmin)
     index_xmax = np.searchsorted(ra, xmax)
@@ -58,7 +56,7 @@ def radec2pix(target, xmin, xmax, ymin, ymax, x, y, ra, dec):
 
     return(cat_xmin, cat_xmax, cat_ymin, cat_ymax)
 
-# Convert coordinates in sexadecimal
+# Convert coordinates in sexagesimal to decimal units
 def hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s):
 
     if len(dec_d) == 1 :
