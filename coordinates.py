@@ -79,3 +79,22 @@ def hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s):
         ra = 15*(ra_h+ra_m/60.+ra_s/3600.)
 
     return ra, dec
+
+def radial_dist(ra1, dec1, ra2, dec2):
+
+    ra1 = np.radians(ra1)
+    dec1 = np.radians(dec1)
+    ra2 = np.radians(ra2)
+    dec2 = np.radians(dec2)
+
+    x1 = np.cos(dec1)*np.cos(ra1)
+    y1 = np.cos(dec1)*np.sin(ra1)
+    z1 = np.sin(dec1)
+    x2 = np.cos(dec2)*np.cos(ra2)
+    y2 = np.cos(dec2)*np.sin(ra2)
+    z2 = np.sin(dec2)
+
+    dist = np.sqrt( (x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
+    dist = np.degrees(dist)*3600.
+
+    return dist
