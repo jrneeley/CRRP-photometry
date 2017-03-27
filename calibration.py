@@ -91,7 +91,7 @@ def find_cal_stars(target, channel):
 #    psf_stars, psf_x, psf_y = read_dao.read_lst('master_'+channel+'.lst')
 #    psf_stars, psf_m, psf_e = read_dao.read_alf(channel+'.alf')
     dtype1 = np.dtype([('id', 'i8'), ('neighbors', 'i2')])
-    data = np.loadtxt(channel+'_cal_stars.txt', usecols=(0,3), dtype=dtype1)
+    data = np.loadtxt(channel+'_cal_star.txt', usecols=(0,3), dtype=dtype1)
     psf_stars = data['id']
     num_neighbors = data['neighbors']
 
@@ -137,7 +137,7 @@ def find_zp(psf_stars, num_neighbors, channel):
         if star < 5000000:
             try:
                 # Find aperture photometry
-                ap_phot = 'lcvs/auto/'+channel+'_'+str(star)+'.txt'
+                ap_phot = 'lcvs/hand_selected/with_corrections/'+channel+'_'+str(star)+'.txt'
                 dtype1 = np.dtype([('mag', 'f7'), ('err', 'f6')])
                 data = np.loadtxt(ap_phot, dtype=dtype1, usecols=(2,3))
 #        data = ascii.read(ap_phot, delimiter=' ')
@@ -150,6 +150,7 @@ def find_zp(psf_stars, num_neighbors, channel):
             #ap_err = np.array(data['col4'], dtype='f')
             except:
                 skipped += 1
+                print star
                 continue
         else:
             continue
