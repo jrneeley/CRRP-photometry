@@ -5,6 +5,7 @@ import numpy as np
 from astropy.io import ascii
 import matplotlib.pyplot as mp
 
+
 def read_raw(raw_file):
 
     f = open(raw_file, 'r')
@@ -86,10 +87,12 @@ def read_lst(lst_file):
 
 def read_alf(alf_file):
 
-    dtype1 = np.dtype([('id', 'i8'), ('mag', 'f6'), ('err', 'f6')])
-    data = np.loadtxt(alf_file, dtype=dtype1, usecols=(0,3,4), skiprows=3)
+    dtype1 = np.dtype([('id', 'i8'), ('x', 'f7'), ('y', 'f7'), ('mag', 'f6'), ('err', 'f6')])
+    data = np.loadtxt(alf_file, dtype=dtype1, usecols=(0,1,2,3,4), skiprows=3)
 
     ids = data['id']
+    x = data['x']
+    y = data['y']
     mag = data['mag']
     err = data['err']
 
@@ -98,4 +101,4 @@ def read_alf(alf_file):
 #    ids = np.array(data['col1'])
 #    mag = np.array(data['col4'])
 
-    return ids, mag, err
+    return ids, x, y, mag, err

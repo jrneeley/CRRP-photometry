@@ -6,6 +6,73 @@ import numpy as np
 import optical
 from astropy.io import ascii
 import math
+import coordinates
+import StringIO
+import glob
+import sys
+
+
+def find_stars_in_cat2(optical_folder, target, channel):
+
+    cat_ids, x, y, ra, dec = optical.read_optical_catalog(optical_folder, target)
+
+    reg_file = open(channel+'.reg').read().replace(':', ' ')
+    dtype1 = np.dtype([('ra_h', 'i2'), ('ra_m', 'i2'), ('ra_s', 'f6'), ('dec_d', 'i3'), ('dec_m', 'i2'), ('dec_s', 'f5')])
+    data = np.loadtxt(StringIO.StringIO(reg_file), dtype=dtype1)
+    ra_h = data['ra_h']
+    ra_m = data['ra_m']
+    ra_s = data['ra_s']
+    dec_d = data['dec_d']
+    dec_m = data['dec_m']
+    dec_s = data['dec_s']
+
+    cal_ra, cal_dec = coordinates.hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s)
+
+    alf_list = glob.glob('all/'+channel+'*.alf')
+
+    phot_data = np.zeros(len(cal_ra), dtype=[('id', 'S8'), ('ra', float), ('dec', float), ('neigh', int),
+        ('x', float, len(alf_list)), ('y', float, len(alf_list)), ('psf_mag', float, len(alf_list)), ('psf_err', float, len(alf_list))])
+
+    for obj in range(0,len(cal_ra)):
+
+        dist = coordinates.radial_dist(cal_ra[obj], cal_dec[obj], ra, dec)
+        neighbors = dist[dist < 3.6]
+        num_neighbors = len(neighbors)
+        cat_match = np.argmin(dist)
+
+        phot_data['id'][obj] = cat_ids[cat_match]
+        phot_data['ra'][obj] = ra[cat_match]
+        phot_data['dec'][obj] = dec[cat_match]
+        phot_data['neigh'][obj] = len(neighbors)
+
+
+    for ind in range(0,len(alf_list)):
+
+        alf_id, x, y, alf_mag, alf_err = read_dao.read_alf(alf_list[ind])
+        for ind2 in range(0,len(cal_ra)):
+            alf_match = np.argwhere(alf_id == int(phot_data['id'][ind2]))
+
+            if len(alf_match):
+                phot_data['x'][ind2,ind] = x[alf_match]
+                phot_data['y'][ind2,ind] = y[alf_match]
+                phot_data['psf_mag'][ind2, ind] = alf_mag[alf_match]
+                phot_data['psf_err'][ind2, ind] = alf_err[alf_match]
+            else:
+                phot_data['x'][ind2,ind] = float('NaN')
+                phot_data['y'][ind2,ind] = float('NaN')
+                phot_data['psf_mag'][ind2,ind] = float('NaN')
+                phot_data['psf_err'][ind2,ind] = float('NaN')
+
+    print 'Writing files...'
+#    print phot_data['x'][1]
+    for ind in range(0,len(cal_ra)):
+
+        np.savetxt('cal_stars/'+channel+'_'+phot_data['id'][ind]+'.coo',
+            np.c_[phot_data['x'][ind],phot_data['y'][ind], phot_data['psf_mag'][ind], phot_data['psf_err'][ind]],
+            header=str(phot_data['id'][ind])+' '+str(phot_data['ra'][ind])+' '+str(phot_data['dec'][ind])+' '+str(phot_data['neigh'][ind]),
+            comments='', fmt='%7.3f %7.3f %6.3f %6.4f')
+
+
 
 def find_cal_star_coords(optical_folder, target, channel):
 #    optical_folder = '/Users/Jill/CRRP/OpticalCatalogs/'

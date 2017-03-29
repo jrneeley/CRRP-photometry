@@ -13,7 +13,8 @@ optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
 
 #calibration.find_stars_in_cat(optical_folder, target_name, channel)
 
+#calibration.find_stars_in_cat2(optical_folder, target_name, channel)
 
-psf_stars, num_nei = calibration.find_cal_stars(target_name, channel)
+#psf_stars, num_nei = calibration.find_cal_stars(target_name, channel)
 
-calibration.find_zp(psf_stars, num_nei, channel)
+calibration.find_zp2(channel)

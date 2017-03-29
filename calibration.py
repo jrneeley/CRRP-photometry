@@ -7,6 +7,9 @@ import optical
 from astropy.io import ascii
 import math
 import coordinates
+import StringIO
+import glob
+import sys
 
 def find_stars_in_cat(optical_folder, target, channel):
 
@@ -55,6 +58,73 @@ def find_stars_in_cat(optical_folder, target, channel):
 
 
     np.savetxt(channel+'_cal_star.txt', np.c_[id_match, ra_match, dec_match, num_neighbors], fmt='%i %f %f %i')
+
+def find_stars_in_cat2(optical_folder, target, channel):
+
+    cat_ids, x, y, ra, dec = optical.read_optical_catalog(optical_folder, target)
+
+    reg_file = open(channel+'.reg').read().replace(':', ' ')
+    dtype1 = np.dtype([('ra_h', 'i2'), ('ra_m', 'i2'), ('ra_s', 'f6'), ('dec_d', 'i3'), ('dec_m', 'i2'), ('dec_s', 'f5')])
+    data = np.loadtxt(StringIO.StringIO(reg_file), dtype=dtype1)
+    ra_h = data['ra_h']
+    ra_m = data['ra_m']
+    ra_s = data['ra_s']
+    dec_d = data['dec_d']
+    dec_m = data['dec_m']
+    dec_s = data['dec_s']
+
+    cal_ra, cal_dec = coordinates.hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s)
+
+    alf_list = glob.glob('all/'+channel+'*.alf')
+
+    phot_data = np.zeros(len(cal_ra), dtype=[('id', 'S8'), ('ra', float), ('dec', float),
+        ('neigh', int), ('aor', 'i8', len(alf_list)), ('f_num', 'i2', len(alf_list)),
+        ('x', float, len(alf_list)), ('y', float, len(alf_list)),
+        ('psf_mag', float, len(alf_list)), ('psf_err', float, len(alf_list))])
+
+    for obj in range(0,len(cal_ra)):
+
+        dist = coordinates.radial_dist(cal_ra[obj], cal_dec[obj], ra, dec)
+        neighbors = dist[dist < 3.6]
+        num_neighbors = len(neighbors)
+        cat_match = np.argmin(dist)
+
+        phot_data['id'][obj] = cat_ids[cat_match]
+        phot_data['ra'][obj] = ra[cat_match]
+        phot_data['dec'][obj] = dec[cat_match]
+        phot_data['neigh'][obj] = len(neighbors)
+
+
+    for ind in range(0,len(alf_list)):
+
+        alf_id, x, y, alf_mag, alf_err = read_dao.read_alf(alf_list[ind])
+        for ind2 in range(0,len(cal_ra)):
+            alf_match = np.argwhere(alf_id == int(phot_data['id'][ind2]))
+            trash1, aor_num, frame_num, trash2 = alf_list[ind].split('_')
+            phot_data['aor'][ind2,ind] = int(aor_num)
+            phot_data['f_num'][ind2, ind] = int(frame_num)
+
+            if len(alf_match):
+                phot_data['x'][ind2,ind] = x[alf_match]
+                phot_data['y'][ind2,ind] = y[alf_match]
+                phot_data['psf_mag'][ind2, ind] = alf_mag[alf_match]
+                phot_data['psf_err'][ind2, ind] = alf_err[alf_match]
+            else:
+                phot_data['x'][ind2,ind] = float('NaN')
+                phot_data['y'][ind2,ind] = float('NaN')
+                phot_data['psf_mag'][ind2,ind] = float('NaN')
+                phot_data['psf_err'][ind2,ind] = float('NaN')
+
+    print 'Writing files...'
+#    print phot_data['x'][1]
+    for ind in range(0,len(cal_ra)):
+
+        np.savetxt('cal_stars/'+channel+'_'+phot_data['id'][ind]+'.coo',
+            np.c_[phot_data['aor'][ind], phot_data['f_num'][ind],
+            phot_data['x'][ind],phot_data['y'][ind], phot_data['psf_mag'][ind],
+            phot_data['psf_err'][ind]],
+            header=str(phot_data['id'][ind])+' '+str(phot_data['ra'][ind])+' '+str(phot_data['dec'][ind])+' '+str(phot_data['neigh'][ind]),
+            comments='', fmt='%8i %2i %7.3f %7.3f %6.3f %6.4f')
 
 def find_cal_star_coords(optical_folder, target, channel):
 #    optical_folder = '/Users/Jill/CRRP/OpticalCatalogs/'
@@ -114,6 +184,8 @@ def find_cal_stars(target, channel):
     print num_neighbors
 
     return psf_stars, num_neighbors
+
+
 def find_zp(psf_stars, num_neighbors, channel):
 
     # read in raw file with PSF photometry in all frames
@@ -243,3 +315,57 @@ def find_zp(psf_stars, num_neighbors, channel):
 
 #    mp.plot(final_avg_mag, final_zp, 'ro')
 #    mp.show()
+
+def find_zp2(channel):
+
+    phot_list = glob.glob('cal_stars/'+channel+'*.phot')
+
+    n_stars = len(phot_list)
+    zp = np.array(n_stars)
+    zp_er = np.array(n_stars)
+    avg_mag = np.array(n_stars)
+    avg_mag_er = np.array(n_stars)
+    id_num = np.array(n_stars, dtype=np.str_)
+    ra = np.array(n_stars)
+    dec = np.array(n_stars)
+    num_neighbors = np.array(n_stars, dtype=int)
+    for phot in phot_list:
+
+        current_ind = phot_list.index(phot)
+        print current_ind
+        f = open(phot, 'r')
+        header = f.readline()
+        f.close()
+        head1, head2, head3, head4 = header.split()
+        id_num[current_ind] = str(head1)
+        ra[current_ind] = float(head2)
+        dec[current_ind] = float(head3)
+        num_neighbors[current_ind] = int(head4)
+
+        dtype1 = np.dtype([('psf_mag',float), ('psf_err', float), ('ap_mag', float), ('ap_err', float)])
+        data = np.loadtxt(phot, dtype=dtype1, usecols=(4,5,6,7), skiprows=1)
+
+        residual = data['ap_mag'] - data['psf_mag']
+
+
+        median_ap = np.nanmedian(data['ap_mag'])
+        mean_ap = np.nanmean(data['ap_mag'])
+        median_psf = np.nanmedian(data['psf_mag'])
+        mean_psf = np.nanmean(data['psf_mag'])
+        std_ap = np.nanstd(data['ap_mag'])
+        std_psf = np.nanstd(data['psf_mag'])
+
+
+        zp[current_ind] = np.nanmean(residual)
+        zp_er[current_ind] = np.nanstd(residual)
+        avg_mag[current_ind] = mean_ap
+        avg_mag_er[current_ind] = std_ap
+
+    print num_neighbors
+    print np.argwhere(num_neighbors < 2)
+
+    good_zp = zp[num_neighbors < 2]
+    mp.plot(avg_mag, zp, 'ro')
+    mp.show()
+    mp.plot(avg_mag, zp_er, 'ro')
+    mp.show()

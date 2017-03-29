@@ -80,6 +80,7 @@ def hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s):
 
     return ra, dec
 
+# Finds radial distance between coordinates in arcsec
 def radial_dist(ra1, dec1, ra2, dec2):
 
     ra1 = np.radians(ra1)
