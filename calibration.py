@@ -10,6 +10,7 @@ import coordinates
 import StringIO
 import glob
 import sys
+from astropy.stats import sigma_clip
 
 def find_stars_in_cat(optical_folder, target, channel):
 
@@ -318,36 +319,39 @@ def find_zp(psf_stars, num_neighbors, channel):
 
 def find_zp2(channel):
 
-    phot_list = glob.glob('cal_stars/'+channel+'*.phot')
+    phot_list = glob.glob('cal_stars/with_corrections/'+channel+'*.phot')
 
     n_stars = len(phot_list)
-    zp = np.array(n_stars)
-    zp_er = np.array(n_stars)
-    avg_mag = np.array(n_stars)
-    avg_mag_er = np.array(n_stars)
-    id_num = np.array(n_stars, dtype=np.str_)
-    ra = np.array(n_stars)
-    dec = np.array(n_stars)
-    num_neighbors = np.array(n_stars, dtype=int)
-    for phot in phot_list:
+    zp = np.zeros(n_stars)
+    zp_er = np.zeros(n_stars)
+    avg_mag = np.zeros(n_stars)
+    avg_mag_er = np.zeros(n_stars)
+    id_num = np.zeros(n_stars, dtype=int)
+    ra = np.zeros(n_stars)
+    dec = np.zeros(n_stars)
+    num_neighbors = np.zeros(n_stars, dtype=int)
+    for ind, phot in enumerate(phot_list):
 
-        current_ind = phot_list.index(phot)
-        print current_ind
+
         f = open(phot, 'r')
         header = f.readline()
         f.close()
         head1, head2, head3, head4 = header.split()
-        id_num[current_ind] = str(head1)
-        ra[current_ind] = float(head2)
-        dec[current_ind] = float(head3)
-        num_neighbors[current_ind] = int(head4)
+
+        id_num[ind] = int(head1)
+        ra[ind] = float(head2)
+        dec[ind] = float(head3)
+        num_neighbors[ind] = int(head4)
 
         dtype1 = np.dtype([('psf_mag',float), ('psf_err', float), ('ap_mag', float), ('ap_err', float)])
         data = np.loadtxt(phot, dtype=dtype1, usecols=(4,5,6,7), skiprows=1)
 
-        residual = data['ap_mag'] - data['psf_mag']
-
-
+        if np.all(np.isnan(data['ap_mag'])) :
+            zp[ind] = float('NaN')
+            zp_er[ind] = float('NaN')
+            avg_mag[ind] = float('NaN')
+            avg_mag_er[ind] = float('NaN')
+            continue
         median_ap = np.nanmedian(data['ap_mag'])
         mean_ap = np.nanmean(data['ap_mag'])
         median_psf = np.nanmedian(data['psf_mag'])
@@ -355,17 +359,51 @@ def find_zp2(channel):
         std_ap = np.nanstd(data['ap_mag'])
         std_psf = np.nanstd(data['psf_mag'])
 
+        filtered_ap = np.array(data['ap_mag'])
+        filtered_psf = np.array(data['psf_mag'])
+        filtered_ap_er = np.array(data['ap_err'])
+        filtered_psf_er = np.array(data['psf_err'])
+        for i in range(5):
+            outliers_ap = np.argwhere(abs(filtered_ap - mean_ap) > 3*std_ap)
+            filtered_ap[outliers_ap] = float('NaN')
+            filtered_ap_er[outliers_ap] = float('NaN')
+            mean_ap = np.nanmean(filtered_ap)
+            std_ap = np.nanstd(filtered_ap)
+            outliers_psf = np.argwhere(abs(filtered_psf - mean_psf) > 3*std_psf)
+            filtered_psf[outliers_psf] = float('NaN')
+            filtered_psf_er[outliers_psf] = float('NaN')
+            mean_psf = np.nanmean(filtered_psf)
+            std_psf = np.nanstd(filtered_psf)
 
-        zp[current_ind] = np.nanmean(residual)
-        zp_er[current_ind] = np.nanstd(residual)
-        avg_mag[current_ind] = mean_ap
-        avg_mag_er[current_ind] = std_ap
+        # Show aperture photometry and PSF photometry for all stars
+    #    f, axarr = mp.subplots(2, sharex=True)
+    #    axarr[0].plot(filtered_ap, 'ro')
+    #    axarr[1].plot(filtered_psf, 'bo')
+    #    mp.show()
 
-    print num_neighbors
-    print np.argwhere(num_neighbors < 2)
+        residual = filtered_ap - filtered_psf
+        res_err = np.sqrt( filtered_ap_er**2 + filtered_psf_er**2)
+        # Show residuals for each bcd for all stars
+    #    mp.errorbar(np.arange(len(residual)), residual, yerr=res_err , fmt='o')
+    #    mp.show()
+        zp[ind] = np.nanmean(residual)
+        zp_er[ind] = np.nanstd(residual)
+        avg_mag[ind] = mean_ap
+        avg_mag_er[ind] = std_ap
 
-    good_zp = zp[num_neighbors < 2]
-    mp.plot(avg_mag, zp, 'ro')
+    good_values = np.argwhere((num_neighbors < 2) & (zp_er < 0.1)).flatten()
+
+    good_zp = zp[good_values]
+    good_zp_er = zp_er[good_values]
+    good_avg_mag = avg_mag[good_values]
+
+    print np.nanmean(good_zp), np.nanmedian(good_zp), np.nanstd(good_zp)
+    #mp.plot(avg_mag, zp, 'ro', good_avg_mag, good_zp, 'bo')
+    mp.errorbar(avg_mag, zp, yerr=zp_er, fmt='o', color='r')
+    mp.errorbar(good_avg_mag, good_zp, yerr=good_zp_er, fmt='o', color='b')
+    linex = [10,20]
+    liney = [np.nanmean(good_zp), np.nanmean(good_zp)]
+    mp.plot(linex, liney, 'k-')
     mp.show()
-    mp.plot(avg_mag, zp_er, 'ro')
-    mp.show()
+#    mp.plot(avg_mag, zp_er, 'ro', good_avg_mag, good_zp_er, 'bo')
+#    mp.show()
