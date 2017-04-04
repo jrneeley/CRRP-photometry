@@ -11,10 +11,10 @@ import optical
 def find_coord_window(img_list):
 
 # initialize boundary conditions
-    bxmin = 999
-    bxmax = 0
-    bymin = 999
-    bymax = -999
+    bxmin = 9999
+    bxmax = -9999
+    bymin = 9999
+    bymax = -9999
 
     for image in img_list:
         w = WCS(image)

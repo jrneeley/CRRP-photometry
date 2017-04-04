@@ -100,7 +100,7 @@ if (start <= 4):
 ## Find appropriate window in source catalog
 if (start <=5):
 
-	ids, xcat, ycat, v_mags, ra, dec = optical.read_optical_catalog(optical_folder, target_name)
+	ids, xcat, ycat, ra, dec = optical.read_optical_catalog(optical_folder, target_name)
 
 	for ind in range(0,num_fields):
 		print "Calculating field " + str(ind+1)+ " boundaries..."

@@ -407,3 +407,32 @@ def find_zp2(channel):
     mp.show()
 #    mp.plot(avg_mag, zp_er, 'ro', good_avg_mag, good_zp_er, 'bo')
 #    mp.show()
+def find_zp_single_frame(infile):
+
+
+    dtype1 = np.dtype([('id', 'i8'), ('x', float), ('y', float), ('ap_mag', float),
+        ('ap_er', float), ('psf_mag', float), ('psf_er', float)])
+    data = np.loadtxt(infile, dtype = dtype1)
+
+    bad_phot = (data['ap_mag'] < 0).nonzero()[0]
+    bad_phot2 = (data['ap_mag'] > 30).nonzero()[0]
+    bad_phot = np.append(bad_phot, bad_phot2)
+    if len(bad_phot):
+        data['ap_mag'][bad_phot] = float('NaN')
+        data['ap_er'][bad_phot] = float('NaN')
+
+    zp = data['ap_mag'] - data['psf_mag']
+    zp_er = np.sqrt( data['ap_er']**2 + data['psf_er']**2 )
+
+    mean_zp = np.nanmean(zp)
+    std_zp = np.nanstd(zp)
+
+    remo = [0]
+    while len(remo):
+        remo = (abs(zp - mean_zp) > 2*std_zp).nonzero()[0]
+        zp[remo] = float('NaN')
+        zp_er[remo] = float('NaN')
+
+    print np.nanmean(zp), np.nanstd(zp)
+    mp.plot(data['ap_mag'], zp, 'ro')
+    mp.show()
