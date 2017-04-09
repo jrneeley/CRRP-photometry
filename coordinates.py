@@ -50,10 +50,16 @@ def radec2pix(target, xmin, xmax, ymin, ymax, x, y, ra, dec):
     index_ymax = np.searchsorted(dec2, ymax)
 
     cat_xmin = x[index_xmin]
-    cat_xmax = x[index_xmax]
+    if index_xmax == len(ra):
+        cat_xmax = x[index_xmax-1]
+    else:
+        cat_xmax = x[index_xmax]
     cat_ymin = y2[index_ymin]
-    cat_ymax = y2[index_ymax]
-
+    if index_ymax == len(dec2):
+        cat_ymax = y2[index_ymax-1]
+    else:
+        cat_ymax = y2[index_ymax]
+        
     return(cat_xmin, cat_xmax, cat_ymin, cat_ymax)
 
 # Convert coordinates in sexagesimal to decimal units

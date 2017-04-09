@@ -39,7 +39,7 @@ else:
 dn_list = glob.glob('all/'+channel+'*dn.fits')
 
 # Define fields (Note: you need to create lists ahead of time for maps)
-num_fields, fields = daophot_setup.find_fields(dn_list, channel)
+num_fields, fields = daophot_setup.find_fields(file_list, channel)
 print str(num_fields)+' fields defined with '+str(len(fields[0]))+' images each.'
 
 
@@ -69,12 +69,12 @@ if (start <= 1):
 ## Copy this PSF to each epoch
 
 	master_file = re.sub(".fits",".psf",master_frame)
-	master_list = re.sub(".fits",".lst",master_frame)
+#	master_list = re.sub(".fits",".lst",master_frame)
 	shutil.copy(master_file, 'master.psf')
 
 	shutil.copy(master_frame, re.sub("all","master",master_frame))
 	shutil.copy(master_file, re.sub("all","master",master_file))
-	shutil.copy(master_list, re.sub("all", "master", master_list))
+#	shutil.copy(master_list, re.sub("all", "master", master_list))
 
 	for file in dn_list:
 		psfname = re.sub(".fits",".psf", file)

@@ -82,25 +82,30 @@ def find_stars_in_cat2(optical_folder, target, channel):
         ('neigh', int), ('aor', 'i8', len(alf_list)), ('f_num', 'i2', len(alf_list)),
         ('x', float, len(alf_list)), ('y', float, len(alf_list)),
         ('psf_mag', float, len(alf_list)), ('psf_err', float, len(alf_list))])
+    neighbors = np.zeros(len(cal_ra), dtype=object)
 
+# Find id numbers of selected stars in optical catalog - and all stars within 6 arcsec
     for obj in range(0,len(cal_ra)):
 
         dist = coordinates.radial_dist(cal_ra[obj], cal_dec[obj], ra, dec)
-        neighbors = dist[dist < 3.6]
-        num_neighbors = len(neighbors)
+
         cat_match = np.argmin(dist)
+        nei_match = np.argwhere(dist < 6.0)
+        num_neighbors = len(nei_match)
 
         phot_data['id'][obj] = cat_ids[cat_match]
         phot_data['ra'][obj] = ra[cat_match]
         phot_data['dec'][obj] = dec[cat_match]
-        phot_data['neigh'][obj] = len(neighbors)
-
-
+        phot_data['neigh'][obj] = num_neighbors
+        neighbors[obj] = cat_ids[nei_match]
+# Find the selected stars in the individual alf files
     for ind in range(0,len(alf_list)):
 
         alf_id, x, y, alf_mag, alf_err = read_dao.read_alf(alf_list[ind])
+
         for ind2 in range(0,len(cal_ra)):
             alf_match = np.argwhere(alf_id == int(phot_data['id'][ind2]))
+            alf_nei_match = np.argwhere(alf_id == neighbors[ind2])
             trash1, aor_num, frame_num, trash2 = alf_list[ind].split('_')
             phot_data['aor'][ind2,ind] = int(aor_num)
             phot_data['f_num'][ind2, ind] = int(frame_num)
@@ -319,7 +324,7 @@ def find_zp(psf_stars, num_neighbors, channel):
 
 def find_zp2(channel):
 
-    phot_list = glob.glob('cal_stars/with_corrections/'+channel+'*.phot')
+    phot_list = glob.glob('cal_stars/'+channel+'*.phot')
 
     n_stars = len(phot_list)
     zp = np.zeros(n_stars)
@@ -392,11 +397,20 @@ def find_zp2(channel):
         avg_mag_er[ind] = std_ap
 
     good_values = np.argwhere((num_neighbors < 2) & (zp_er < 0.1)).flatten()
-
     good_zp = zp[good_values]
     good_zp_er = zp_er[good_values]
     good_avg_mag = avg_mag[good_values]
 
+    remo=[0]
+    while len(remo):
+        mean_zp = np.nanmean(good_zp)
+        std_zp = np.nanstd(good_zp)
+        remo = (abs(good_zp - mean_zp) > 2*std_zp).nonzero()[0]
+        good_zp = np.delete(good_zp, remo)
+        good_zp_er = np.delete(good_zp_er, remo)
+        good_avg_mag = np.delete(good_avg_mag, remo)
+    print str(len(good_zp))+' final calibration stars.'
+    print 'Mean, median zero point and standard deviation:'
     print np.nanmean(good_zp), np.nanmedian(good_zp), np.nanstd(good_zp)
     #mp.plot(avg_mag, zp, 'ro', good_avg_mag, good_zp, 'bo')
     mp.errorbar(avg_mag, zp, yerr=zp_er, fmt='o', color='r')
@@ -404,6 +418,8 @@ def find_zp2(channel):
     linex = [10,20]
     liney = [np.nanmean(good_zp), np.nanmean(good_zp)]
     mp.plot(linex, liney, 'k-')
+    mp.ylabel('Aperture - PSF')
+    mp.xlabel('Aperture mag')
     mp.show()
 #    mp.plot(avg_mag, zp_er, 'ro', good_avg_mag, good_zp_er, 'bo')
 #    mp.show()
