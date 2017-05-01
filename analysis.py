@@ -1,7 +1,7 @@
 import read_dao
 import numpy as np
 
-ids, raw_phot = read_dao.read_raw('optical_alf.raw')
+ids, raw_phot = read_dao.read_raw('optical_alf.cor')
 
 id_num = np.zeros(len(ids), dtype=int)
 x = np.zeros(len(ids), dtype=float)
@@ -25,4 +25,4 @@ for ind, star in enumerate(ids):
 
 
 data = np.c_[id_num, x, y, avgs, avg_err]
-np.savetxt('test.txt',data, fmt='%8i %9.3f %9.3f %6.3f %5.3f')
+np.savetxt('test2.txt',data, fmt='%8i %9.3f %9.3f %6.3f %5.3f')

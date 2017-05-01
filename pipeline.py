@@ -30,9 +30,10 @@ daophot_setup.set_opt_files(channel)
 
 # Convert images to counts
 if (len(dn_list) == 0):
+	print "Converting images to DN..."
 	for image in file_list:
 		daophot_setup.spitzer_flux2dn(image, "")
-	print "All files converted to counts."
+	print "Done."
 else:
 	print "Files already converted to counts."
 
@@ -81,6 +82,7 @@ if (start <= 1):
 		shutil.copy('master.psf', psfname)
 if (start <= 2):
 ## Run ALLSTAR
+	print "Starting ALLSTAR..."
 	for file in dn_list:
 		allstar.allstar_init(dao_folder, target_name, file)
 	print "ALLSTAR complete."
@@ -94,7 +96,7 @@ if (start <= 3):
 ## Run DAOMASTER
 if (start <= 4):
 	for x in range(0,num_fields):
-		print "Working on field "+ str(x+1)
+#		print "Working on field "+ str(x+1)
 		daomaster.daomaster_init(dao_folder, channel+"_field"+str(x+1)+".mch")
 
 ## Find appropriate window in source catalog

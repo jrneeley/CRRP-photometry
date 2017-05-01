@@ -22,7 +22,7 @@ def allstar_init(dao_folder, target, fitsfile):
                         os.remove(temp+ext)
         image=re.sub("all/",target+":", temp)
 
-        print "Working on " + image
+    #    print "Working on " + image
 
 ## Running ALLSTAR
 	allstar = pexpect.spawn(dao_folder+'allstar')

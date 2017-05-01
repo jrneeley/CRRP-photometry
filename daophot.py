@@ -20,7 +20,7 @@ def init_phot(dao_folder, target, fitsfile):
         		os.remove(temp+ext)
 	image = re.sub("all/",target+":", temp)
 
-	print "Working on " + image
+#	print "Working on " + image
 
 ## Running daophot
 
@@ -41,7 +41,7 @@ def init_phot(dao_folder, target, fitsfile):
 	daophot.expect("Are you happy with this?")
 	daophot.sendline("y")
 
-	print "FIND complete"
+#	print "FIND complete"
 
 ## Aperture photometry
 	daophot.expect("Command:")
@@ -55,7 +55,7 @@ def init_phot(dao_folder, target, fitsfile):
 	daophot.expect("Output file")
 	daophot.sendline(image + '.ap')
 
-	print "PHOT complete"
+#	print "PHOT complete"
 
 ## Exit Daophot
 	daophot.expect("Command:")

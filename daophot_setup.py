@@ -14,9 +14,9 @@ def folder():
 	return daophot_folder, optical_folder
 
 def spitzer_flux2dn(image, newname=""):
+
 	if (newname == ""):
 		newname = re.sub(".fits", "_dn.fits", image)
-	print newname
 	shutil.copy(image, newname)
 	hdulist = fits.open(newname, mode='update')
 	prihdr = hdulist[0].header
@@ -24,7 +24,7 @@ def spitzer_flux2dn(image, newname=""):
 	exptime = prihdr['exptime']
 	fluxconv = prihdr['fluxconv']
 	scidata *= exptime/fluxconv
-	return(0)
+
 
 def set_opt_files(channel):
 	if (channel == 'I1'):
@@ -32,7 +32,7 @@ def set_opt_files(channel):
 	if (channel == 'I2'):
 		optfile = 'ch2.opt'
 	shutil.copy(optfile, 'daophot.opt')
-	return(0)
+
 
 def find_fields(image_list, channel):
 	off_list = []
