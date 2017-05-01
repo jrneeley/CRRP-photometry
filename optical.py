@@ -3,6 +3,7 @@
 import numpy as np
 from astropy.io import ascii
 import coordinates
+import shutil
 
 
 def read_optical_catalog(optical_folder, target):

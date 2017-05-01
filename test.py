@@ -12,7 +12,7 @@ import glob
 import coordinates
 
 target_name = sys.argv[1]
-channel = sys.argv[2]
+#channel = sys.argv[2]
 
 #optical_folder = raw_input("Enter path to optical catalog: ")
 optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
@@ -24,7 +24,7 @@ optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
 
 #psf_stars, num_nei = calibration.find_cal_stars(target_name, channel)
 
-calibration.find_zp2(channel)
+#calibration.find_zp2(channel)
 
 #hdulist = fits.open('mosaic_dn.fits', mode='update')
 #prihdr = hdulist[0].header
@@ -36,3 +36,5 @@ calibration.find_zp2(channel)
 #hdu.writeto(outfile, clobber=True)
 #infile = 'alf-ap-phot.dat'
 #calibration.find_zp_single_frame(infile)
+
+optical.make_empty_cat(optical_folder, target_name)
