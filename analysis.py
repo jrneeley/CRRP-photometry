@@ -8,14 +8,24 @@ import sys
 #dtype1 = np.dtype([('stars', 'S3'), ('dao_ids', 'i8')])
 #data = np.loadtxt('PeterIDs.txt', dtype=dtype1)
 
-#lightcurves.make_lcv(data['stars'], data['dao_ids'])
+#lightcurves.make_lcv(['I1'], data['stars'], data['dao_ids'])
 
-lcv_list = glob.glob('*.lcv')
-peter_list = glob.glob('Peter/*.lcv')
+#lcv_list = glob.glob('lcvs/*.phased')
 
-for lcv in lcv_list:
-    lightcurves.compare_lcv(lcv)
+#for lcv in lcv_list:
+#    print lcv
+#    lightcurves.compare_phased_lcv(lcv)
 
+dtype1= np.dtype([('id', 'S3'), ('period', float), ('t0', float)])
+data = np.loadtxt('M4_RRL.info', dtype=dtype1, usecols=(0,1,2))
+
+for ind, star in enumerate(data['id']):
+    try:
+        lightcurves.phase_lcv('lcvs/'+star+'.lcv', data['period'][ind], data['t0'][ind])
+
+
+    except:
+        print 'Star '+ star + ' not found.'
 sys.exit()
 
 ids, raw_phot = read_dao.read_raw('optical_alf.raw')
