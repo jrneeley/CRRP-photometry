@@ -114,43 +114,71 @@ def compare_phased_lcv(lcv_file):
 
 def phase_lcv(lcv_file, period, T0, bin=1):
 
-    dtype1 = np.dtype([('filter', 'S2'), ('aor', 'i8'), ('mjd', float), ('mag', float), ('err', float)])
+    dtype1 = np.dtype([('filter', 'S2'), ('aor', 'i8'), ('mjd', float),
+        ('mag', float), ('err', float)])
     data = np.loadtxt(lcv_file, dtype=dtype1, usecols=(0,1,3,6,7))
 
     filters = np.unique(data['filter'])
+    for filt in filters:
+
+        mag_all = data['mag'][data['filter'] == filt]
+        err_all = data['err'][data['filter'] == filt]
+        mjd_all = data['mjd'][data['filter'] == filt]
+        aor_all = data['aor'][data['filter'] == filt]
+
 # build in support for multiple filters
-    if (bin == 1):
-        aors = np.unique(data['aor'])
-        num_aors = len(aors)
-        mag = np.zeros(num_aors)
-        err = np.zeros(num_aors)
-        mjd = np.zeros(num_aors)
-        filt = np.zeros(num_aors, dtype='S2')
+        if (bin == 1):
+            aors = np.unique(aor_all)
+            num_aors = len(aors)
+            mag = np.zeros(num_aors)
+            err = np.zeros(num_aors)
+            mjd = np.zeros(num_aors)
+            band = np.zeros(num_aors, dtype='S2')
 
-        for ind, aor in enumerate(aors):
-            mag[ind] = np.nanmean(data['mag'][data['aor'] == aor])
-            mjd[ind] = np.nanmean(data['mjd'][data['aor']== aor])
-            num = len(data['mag'][~np.isnan(data['mag'][data['aor'] == aor])])
-            if (num >=2):
-                err[ind] = np.nanstd(data['mag'][data['aor']== aor])
-            else:
-                err[ind] = data['err'][data['aor'] == aor]
-            filt[ind] = filters[0]
-    else:
-        mag = data['mag']
-        err = data['err']
-        mjd = data['mjd']
-        filt = np.zeros(len(mag))
-        filt = filters[0]
-    phase = np.mod((mjd - T0)/period, 1)
-    phased_file = re.sub('.lcv', '.phased', lcv_file)
-    data_save = np.array(zip(filt, phase, mag, err), dtype=[('c1', 'S2'), ('c2', float), ('c3', float), ('c4', float)])
-    np.savetxt(phased_file, data_save, fmt='%s %8.6f %6.3f %5.3f')
+            for ind, aor in enumerate(aors):
+                band[ind] = filt
+                num = len(mag_all[~np.isnan(mag_all[aor_all == aor])])
+                if (num >= 2):
+                    mag[ind] = np.nanmean(mag_all[aor_all == aor])
+                    mjd[ind] = np.nanmean(mjd_all[aor_all == aor])
+                    err[ind] = np.nanstd(mag_all[aor_all== aor])
+                if (num == 1):
+                    epoch_mag = mag_all[aor_all == aor]
+                    epoch_err = err_all[aor_all == aor]
+                    epoch_mjd = mjd_all[aor_all == aor]
+                    mag[ind] = epoch_mag[~np.isnan(epoch_mag)]
+                    mjd[ind] = epoch_mjd[~np.isnan(epoch_mag)]
+                    err[ind] = epoch_err[~np.isnan(epoch_mag)]
+                if (num == 0):
+                    mag[ind] = np.nan
+                    mjd[ind] = np.nan
+                    err[ind] = np.nan
+        else:
+            mag = mag_all
+            err = err_all
+            mjd = mjd_all
+            band = np.repeat(filt, len(mag))
 
-    mp.errorbar(phase, mag, yerr=err, fmt='o')
-    mp.ylim((np.max(mag)+0.1, np.max(mag)-0.5))
-    mp.xlabel('Phase')
-    mp.ylabel('Mag')
-    plot_file = re.sub('.phased', '_ph.pdf', phased_file)
-    mp.savefig(plot_file)
-    mp.gcf().clear()
+        phase = np.mod((mjd - T0)/period, 1)
+        phased_file = re.sub('.lcv', '.phased', lcv_file)
+        if filt == filters[0]:
+            f_handle = open(phased_file, 'w')
+        else:
+            f_handle = open(phased_file, 'a')
+        data_save = np.array(zip(band, phase, mag, err), dtype=[('c1', 'S2'),
+            ('c2', float), ('c3', float), ('c4', float)])
+        np.savetxt(f_handle, data_save, fmt='%s %8.6f %6.3f %5.3f')
+        f_handle.close()
+
+        # remove any NaN values
+        phase = phase[~np.isnan(mag)]
+        err = err[~np.isnan(mag)]
+        mag = mag[~np.isnan(mag)]
+
+        mp.errorbar(phase, mag, yerr=err, fmt='o')
+        mp.ylim((np.max(mag)+0.1, np.max(mag)-0.5))
+        mp.xlabel('Phase')
+        mp.ylabel('Mag')
+        plot_file = re.sub('.phased', '_'+filt+'_ph.pdf', phased_file)
+        mp.savefig(plot_file)
+        mp.gcf().clear()

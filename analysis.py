@@ -23,7 +23,6 @@ for ind, star in enumerate(data['id']):
     try:
         lightcurves.phase_lcv('lcvs/'+star+'.lcv', data['period'][ind], data['t0'][ind])
 
-
     except:
         print 'Star '+ star + ' not found.'
 sys.exit()
