@@ -59,32 +59,46 @@ def radec2pix(target, xmin, xmax, ymin, ymax, x, y, ra, dec):
         cat_ymax = y2[index_ymax-1]
     else:
         cat_ymax = y2[index_ymax]
-        
+
     return(cat_xmin, cat_xmax, cat_ymin, cat_ymax)
 
 # Convert coordinates in sexagesimal to decimal units
 def hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s):
 
-    if len(dec_d) == 1 :
+    if type(dec_d) != np.ndarray:
         if dec_d < 0:
             dec = dec_d - dec_m/60. - dec_s/3600.
         if dec_d >= 0 :
             dec = dec_d + dec_m/60. + dec_s/3600.
-    if len(dec_d) > 1:
+        ra = 15*(ra_h+ra_m/60.+ra_s/3600.)
+    else:
         dec = []
         for ind in range(0,len(ra_h)):
             if dec_d[ind] < 0:
                 dec.append(dec_d[ind] - dec_m[ind]/60. - dec_s[ind]/3600.)
             if dec_d[ind] > 0:
                 dec.append(dec_d[ind] + dec_m[ind]/60. + dec_s[ind]/3600.)
-    if len(ra_h) > 1:
+#    if len(ra_h) > 1:
         ra = []
         for ind in range(0,len(ra_h)):
             ra.append(15.*(ra_h[ind]+ra_m[ind]/60.+ra_s[ind]/3600.))
-    if len(ra_h) == 1:
-        ra = 15*(ra_h+ra_m/60.+ra_s/3600.)
 
     return ra, dec
+
+def radec_string2deg(ra, dec):
+
+    ra_new = np.zeros(len(ra))
+    dec_new = np.zeros(len(dec))
+    for ind, star in enumerate(ra):
+
+        ra_sep = ra[ind].split(':')
+        dec_sep = dec[ind].split(':')
+
+        ra_deg, dec_deg = hms2deg(float(ra_sep[0]), float(ra_sep[1]),
+            float(ra_sep[2]), float(dec_sep[0]), float(dec_sep[1]), float(dec_sep[2]))
+        ra_new[ind] = ra_deg
+        dec_new[ind] = dec_deg
+    return ra_new, dec_new
 
 # Finds radial distance between coordinates in arcsec
 def radial_dist(ra1, dec1, ra2, dec2):
@@ -105,3 +119,5 @@ def radial_dist(ra1, dec1, ra2, dec2):
     dist = np.degrees(dist)*3600.
 
     return dist
+
+    

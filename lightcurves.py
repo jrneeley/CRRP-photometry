@@ -44,7 +44,7 @@ def make_lcv(channels, stars, dao_ids):
                     phot_data['y'][ind2,ind] = float('NaN')
                     phot_data['psf_mag'][ind2,ind] = float('NaN')
                     phot_data['psf_err'][ind2,ind] = float('NaN')
-        print 'Writing to files...'
+        print 'Writing to file...'
         for ind in range(0,len(dao_ids)):
 
             data_save = np.array(zip(phot_data['filter'][ind], phot_data['aor'][ind],
@@ -112,7 +112,7 @@ def compare_phased_lcv(lcv_file):
         mp.savefig(plt_file)
         mp.gcf().clear()
 
-def phase_lcv(lcv_file, period, T0, bin=1):
+def phase_lcv(lcv_file, period, T0, bin=1, save=1, plot=0):
 
     dtype1 = np.dtype([('filter', 'S2'), ('aor', 'i8'), ('mjd', float),
         ('mag', float), ('err', float)])
@@ -126,7 +126,6 @@ def phase_lcv(lcv_file, period, T0, bin=1):
         mjd_all = data['mjd'][data['filter'] == filt]
         aor_all = data['aor'][data['filter'] == filt]
 
-# build in support for multiple filters
         if (bin == 1):
             aors = np.unique(aor_all)
             num_aors = len(aors)
@@ -160,25 +159,88 @@ def phase_lcv(lcv_file, period, T0, bin=1):
             band = np.repeat(filt, len(mag))
 
         phase = np.mod((mjd - T0)/period, 1)
-        phased_file = re.sub('.lcv', '.phased', lcv_file)
-        if filt == filters[0]:
-            f_handle = open(phased_file, 'w')
-        else:
-            f_handle = open(phased_file, 'a')
-        data_save = np.array(zip(band, phase, mag, err), dtype=[('c1', 'S2'),
-            ('c2', float), ('c3', float), ('c4', float)])
-        np.savetxt(f_handle, data_save, fmt='%s %8.6f %6.3f %5.3f')
-        f_handle.close()
+        if save == 1:
+            phased_file = re.sub('.lcv', '.phased', lcv_file)
+            if filt == filters[0]:
+                f_handle = open(phased_file, 'w')
+            else:
+                f_handle = open(phased_file, 'a')
+            data_save = np.array(zip(band, phase, mag, err), dtype=[('c1', 'S2'),
+                ('c2', float), ('c3', float), ('c4', float)])
+            np.savetxt(f_handle, data_save, fmt='%s %8.6f %6.3f %5.3f')
+            f_handle.close()
 
-        # remove any NaN values
-        phase = phase[~np.isnan(mag)]
-        err = err[~np.isnan(mag)]
-        mag = mag[~np.isnan(mag)]
+            # remove any NaN values
+            phase = phase[~np.isnan(mag)]
+            err = err[~np.isnan(mag)]
+            mag = mag[~np.isnan(mag)]
 
-        mp.errorbar(phase, mag, yerr=err, fmt='o')
-        mp.ylim((np.max(mag)+0.1, np.max(mag)-0.5))
-        mp.xlabel('Phase')
-        mp.ylabel('Mag')
-        plot_file = re.sub('.phased', '_'+filt+'_ph.pdf', phased_file)
-        mp.savefig(plot_file)
-        mp.gcf().clear()
+            mp.errorbar(phase, mag, yerr=err, fmt='o')
+        #    mp.ylim((np.max(mag)+0.1, np.max(mag)-0.5))
+            mp.xlabel('Phase')
+            mp.ylabel('Mag')
+            plot_file = re.sub('.phased', '_'+filt+'_ph.pdf', phased_file)
+            mp.savefig(plot_file)
+            mp.gcf().clear()
+
+        if plot == 1:
+            phase = phase[~np.isnan(mag)]
+            err = err[~np.isnan(mag)]
+            mag = mag[~np.isnan(mag)]
+
+            mp.errorbar(phase, mag, yerr=err, fmt='o')
+        #    mp.ylim((np.max(mag)+0.1, np.max(mag)-0.5))
+            mp.xlabel('Phase')
+            mp.ylabel('Mag')
+            mp.show()
+
+def plot_raw_lcv(lcv_file, dao_id):
+
+    dtype1 = np.dtype([('filter', 'S2'), ('aor', 'i8'), ('mjd', float),
+        ('mag', float), ('err', float)])
+    data = np.loadtxt(lcv_file, dtype=dtype1, usecols=(0,1,3,6,7))
+
+    filters = np.unique(data['filter'])
+    for filt in filters:
+
+        mag_all = data['mag'][data['filter'] == filt]
+        err_all = data['err'][data['filter'] == filt]
+        mjd_all = data['mjd'][data['filter'] == filt]
+        aor_all = data['aor'][data['filter'] == filt]
+
+
+        aors = np.unique(aor_all)
+        num_aors = len(aors)
+        mag = np.zeros(num_aors)
+        err = np.zeros(num_aors)
+        mjd = np.zeros(num_aors)
+
+        for ind, aor in enumerate(aors):
+            num = len(mag_all[~np.isnan(mag_all[aor_all == aor])])
+            if (num >= 2):
+                mag[ind] = np.nanmedian(mag_all[aor_all == aor])
+                mjd[ind] = np.nanmean(mjd_all[aor_all == aor])
+                err[ind] = np.nanstd(mag_all[aor_all== aor])
+            if (num == 1):
+                epoch_mag = mag_all[aor_all == aor]
+                epoch_err = err_all[aor_all == aor]
+                epoch_mjd = mjd_all[aor_all == aor]
+                mag[ind] = epoch_mag[~np.isnan(epoch_mag)]
+                mjd[ind] = epoch_mjd[~np.isnan(epoch_mag)]
+                err[ind] = epoch_err[~np.isnan(epoch_mag)]
+            if (num == 0):
+                mag[ind] = np.nan
+                mjd[ind] = np.nan
+                err[ind] = np.nan
+
+
+        if ~np.isnan(mag).any():
+            mp.plot(mjd_all, mag_all, 'ro')
+            mp.plot(mjd, mag, 'bo')
+            mp.xlabel('MJD')
+            mp.ylabel('Mag')
+            mp.ylim(np.max(mag)+0.2, np.min(mag)-0.2)
+            mp.title(dao_id)
+            plot_file = re.sub('.lcv', '_'+filt+'_raw.pdf', lcv_file)
+            mp.savefig(plot_file)
+            mp.gcf().clear()

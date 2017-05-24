@@ -4,7 +4,7 @@ import numpy as np
 import lightcurves
 import glob
 import sys
-
+import variables
 #dtype1 = np.dtype([('stars', 'S3'), ('dao_ids', 'i8')])
 #data = np.loadtxt('PeterIDs.txt', dtype=dtype1)
 
@@ -16,16 +16,18 @@ import sys
 #    print lcv
 #    lightcurves.compare_phased_lcv(lcv)
 
-dtype1= np.dtype([('id', 'S3'), ('period', float), ('t0', float)])
-data = np.loadtxt('M4_RRL.info', dtype=dtype1, usecols=(0,1,2))
+#dtype1= np.dtype([('id', 'S3'), ('period', float), ('t0', float)])
+#data = np.loadtxt('M4_RRL.info', dtype=dtype1, usecols=(0,1,2))
 
-for ind, star in enumerate(data['id']):
-    try:
-        lightcurves.phase_lcv('lcvs/'+star+'.lcv', data['period'][ind], data['t0'][ind])
+#for ind, star in enumerate(data['id']):
+#    try:
+#        lightcurves.phase_lcv('lcvs/'+star+'.lcv', data['period'][ind], data['t0'][ind])
 
-    except:
-        print 'Star '+ star + ' not found.'
-sys.exit()
+#    except:
+#        print 'Star '+ star + ' not found.'
+#folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
+#variables.find_variables_by_coord(folder, 'NGC3201')
+#sys.exit()
 
 ids, raw_phot = read_dao.read_raw('optical_alf.raw')
 
@@ -55,4 +57,4 @@ for ind, star in enumerate(ids):
 #    sm.robust.scale.huber(mags[ind][good])
 
 data = np.c_[id_num, x, y, avgs, avg_err]
-np.savetxt('test3.txt',data, fmt='%8i %9.3f %9.3f %6.3f %5.3f')
+np.savetxt('catalog.txt',data, fmt='%8i %9.3f %9.3f %6.3f %5.3f')
