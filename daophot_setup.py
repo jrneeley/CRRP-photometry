@@ -6,7 +6,7 @@ from astropy.io import fits
 import numpy as np
 import matplotlib.pyplot as mp
 import sys
-
+from matplotlib.ticker import ScalarFormatter
 
 def folder():
 	daophot_folder = raw_input("Enter path to Daophot executables: ")
@@ -71,6 +71,9 @@ def find_fields(image_list, channel):
 	mp.plot(center_ra, center_dec,'ro')
 	mp.ylabel('Dec')
 	mp.xlabel('RA')
+	x_formatter = ScalarFormatter(useOffset=False)
+	mp.gca().xaxis.set_major_formatter(x_formatter)
+#	mp.savefig('mapping-positions.eps', format='eps')
 	mp.show()
 # Ask user how many separate fields there are
 	num_fields = input('How many fields exist for this data set?: ')

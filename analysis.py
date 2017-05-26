@@ -5,6 +5,9 @@ import lightcurves
 import glob
 import sys
 import variables
+
+target = sys.argv[1]
+
 #dtype1 = np.dtype([('stars', 'S3'), ('dao_ids', 'i8')])
 #data = np.loadtxt('PeterIDs.txt', dtype=dtype1)
 
@@ -25,9 +28,9 @@ import variables
 
 #    except:
 #        print 'Star '+ star + ' not found.'
-#folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
-#variables.find_variables_by_coord(folder, 'NGC3201')
-#sys.exit()
+folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
+variables.find_variables_by_coord(folder, target)
+sys.exit()
 
 ids, raw_phot = read_dao.read_raw('optical_alf.raw')
 

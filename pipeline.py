@@ -11,7 +11,7 @@ import daomatch
 import daomaster
 import coordinates
 import optical
-
+import numpy as np
 
 target_name = sys.argv[1]
 channel = sys.argv[2]
@@ -104,6 +104,12 @@ if (start <=5):
 
 	ids, xcat, ycat, ra, dec = optical.read_optical_catalog(optical_folder, target_name)
 
+	xmin = np.zeros(num_fields)
+	xmax = np.zeros(num_fields)
+	ymin = np.zeros(num_fields)
+	ymax = np.zeros(num_fields)
+	f = np.zeros(num_fields, dtype='S8')
+
 	for ind in range(0,num_fields):
 		print "Calculating field " + str(ind+1)+ " boundaries..."
 		x1, x2, y1, y2 = coordinates.find_coord_window(fields[ind])
@@ -111,6 +117,15 @@ if (start <=5):
 		c1, c2, c3, c4 = coordinates.radec2pix(target_name, x1, x2, y1, y2, xcat, ycat, ra, dec)
 		print "Xmin, Xmax, Ymin, Ymax for optical catalog:"
 		print c1, c2, c3, c4
+		xmin[ind] = c1
+		xmax[ind] = c2
+		ymin[ind] = c3
+		ymax[ind] = c4
+		f[ind] = 'Field '+str(ind+1)
+	data_save = np.array(zip(f, xmin, xmax, ymin, ymax), dtype=[('c1', 'S8'),
+		('c2', float), ('c3', float), ('c4', float), ('c5', float)])
+	#	print limits
+	np.savetxt(channel+'-catalog-cuts.txt', data_save, comments='', fmt='%s %f %f %f %f')
 
 	#print "Calculating off field boundaries..."
 	#x1, x2, y1, y2 = coordinates.find_coord_window(off_list)

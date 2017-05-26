@@ -29,8 +29,11 @@ def read_raw(raw_file):
 
 def read_mag(mag_file):
 
-    f = open(mag_file, 'r')
-    lines = f.readlines()
+    dtype1 = np.dtype([('id', 'i8'), ('x', 'f7'), ('y', 'f7'), ('mag', 'f6'),
+        ('err', 'f6')])
+    data = np.loadtxt(mag_file, dtype=dtype1, usecols=(0,1,2,3,4), skiprows=3)
+
+    return data['id'], data['x'], data['y'], data['mag'], data['err']
 
 def read_mch(mch_file):
 
