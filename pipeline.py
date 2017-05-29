@@ -22,7 +22,6 @@ dn_list = glob.glob('all/'+channel+'*_dn.fits')
 # Identify relevant paths
 dao_folder = '/Users/jrneeley/Daophot/'
 optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
-#dao_folder, optical_folder = daophot_setup.folder()
 
 # Set daophot.opt file to appropriate channel
 daophot_setup.set_opt_files(channel)
@@ -70,12 +69,10 @@ if (start <= 1):
 ## Copy this PSF to each epoch
 
 	master_file = re.sub(".fits",".psf",master_frame)
-#	master_list = re.sub(".fits",".lst",master_frame)
 	shutil.copy(master_file, 'master.psf')
 
 	shutil.copy(master_frame, re.sub("all","master",master_frame))
 	shutil.copy(master_file, re.sub("all","master",master_file))
-#	shutil.copy(master_list, re.sub("all", "master", master_list))
 
 	for file in dn_list:
 		psfname = re.sub(".fits",".psf", file)
@@ -102,7 +99,7 @@ if (start <= 4):
 ## Find appropriate window in source catalog
 if (start <=5):
 
-	ids, xcat, ycat, ra, dec = optical.read_optical_catalog(optical_folder, target_name)
+	ids, xcat, ycat, ra, dec = optical.read_optical_fnl(optical_folder, target_name)
 
 	xmin = np.zeros(num_fields)
 	xmax = np.zeros(num_fields)
@@ -121,14 +118,9 @@ if (start <=5):
 		xmax[ind] = c2
 		ymin[ind] = c3
 		ymax[ind] = c4
-		f[ind] = 'Field '+str(ind+1)
+		f[ind] = 'Field'+str(ind+1)
+
+# Save boundary window for each field into a text file (e.g. I1-catalog-cuts.txt)
 	data_save = np.array(zip(f, xmin, xmax, ymin, ymax), dtype=[('c1', 'S8'),
 		('c2', float), ('c3', float), ('c4', float), ('c5', float)])
-	#	print limits
-	np.savetxt(channel+'-catalog-cuts.txt', data_save, comments='', fmt='%s %f %f %f %f')
-
-	#print "Calculating off field boundaries..."
-	#x1, x2, y1, y2 = coordinates.find_coord_window(off_list)
-	#c1, c2, c3, c4 = coordinates.radec2pix(target_name, x1, x2, y1, y2, xcat, ycat, ra, dec)
-	#print "Xmin, Xmax, Ymin, Ymax for optical catalog:"
-	#print c1, c2, c3, c4
+	np.savetxt(channel+'-catalog-cuts.txt', data_save, comments='', fmt='%s %0.3f %0.3f %0.3f %0.3f')

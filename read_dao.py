@@ -2,7 +2,6 @@
 
 import sys
 import numpy as np
-from astropy.io import ascii
 import matplotlib.pyplot as mp
 
 
@@ -81,10 +80,6 @@ def read_lst(lst_file):
     x = data['x']
     y = data['y']
 
-#    data = ascii.read(lst_file, delimiter=' ', data_start=2)
-#    ids = np.array(data['col1'])
-#    x = np.array(data['col2'])
-#    y = np.array(data['col3'])
 
     return ids, x, y
 
@@ -99,9 +94,5 @@ def read_alf(alf_file):
     mag = data['mag']
     err = data['err']
 
-#    data = ascii.read(alf_file, delimiter=' ', data_start=2)
-
-#    ids = np.array(data['col1'])
-#    mag = np.array(data['col4'])
 
     return ids, x, y, mag, err

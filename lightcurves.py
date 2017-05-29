@@ -176,7 +176,7 @@ def phase_lcv(lcv_file, period, T0, bin=1, save=1, plot=0):
             mag = mag[~np.isnan(mag)]
 
             mp.errorbar(phase, mag, yerr=err, fmt='o')
-        #    mp.ylim((np.max(mag)+0.1, np.max(mag)-0.5))
+            mp.ylim((np.max(mag)+0.2, np.min(mag)-0.2))
             mp.xlabel('Phase')
             mp.ylabel('Mag')
             plot_file = re.sub('.phased', '_'+filt+'_ph.pdf', phased_file)
@@ -189,7 +189,7 @@ def phase_lcv(lcv_file, period, T0, bin=1, save=1, plot=0):
             mag = mag[~np.isnan(mag)]
 
             mp.errorbar(phase, mag, yerr=err, fmt='o')
-        #    mp.ylim((np.max(mag)+0.1, np.max(mag)-0.5))
+            mp.ylim((np.max(mag)+0.2, np.min(mag)-0.2))
             mp.xlabel('Phase')
             mp.ylabel('Mag')
             mp.show()

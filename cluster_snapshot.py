@@ -42,7 +42,7 @@ mp.gcf().clear()
 
 optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
 
-ids, xcat, ycat, ra, dec = optical.read_optical_catalog(optical_folder, target)
+ids, xcat, ycat, ra, dec = optical.read_optical_fnl(optical_folder, target)
 
 dtype1 = np.dtype([('xmin', float), ('xmax', float), ('ymin', float), ('ymax', float)])
 cuts = np.loadtxt(channel+'-catalog-cuts.txt', dtype=dtype1, usecols=(1,2,3,4))
