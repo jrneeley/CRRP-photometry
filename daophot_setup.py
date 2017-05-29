@@ -33,6 +33,12 @@ def set_opt_files(channel):
 		optfile = 'ch2.opt'
 	shutil.copy(optfile, 'daophot.opt')
 
+def set_opt_files_mosaic(channel):
+	if (channel == 'I1'):
+		optfile = 'ch1-mosaic.opt'
+	if (channel == 'I2'):
+		optfile = 'ch2-mosaic.opt'
+	shutil.copy(optfile, 'daophot.opt')
 
 def find_fields(image_list, channel):
 	off_list = []

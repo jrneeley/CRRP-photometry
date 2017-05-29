@@ -54,6 +54,28 @@ def read_optical_fnl(optical_folder, target):
     print "Finished reading optical catalog."
     return(id_num, x, y, ra, dec)
 
+def find_variables_fnl(optical_folder, target):
+
+    catalog=optical_folder+target+'.fnl'
+
+    print "Reading optical catalog for "+target+"..."
+
+    f = open(catalog, 'r')
+    lines = f.readlines()
+    master_id=[]
+    variable_id=[]
+
+    for line in lines:
+        temp = line.split()
+        if len(temp) == 32:
+            master_id.append(temp[0])
+            variable_id.append(temp[-1])
+
+    data_save = np.array(zip(variable_id, master_id), dtype=[('c1', 'S8'), ('c2', 'I8')])
+    np.savetxt('PeterIDs.txt', data_save, comments='', fmt='%s %i')
+
+
+
 def read_optical_catalog_old(target):
 
     catalog='test_old.dat'
