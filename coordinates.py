@@ -39,6 +39,21 @@ def find_coord_window(img_list):
 
     return(bxmin, bxmax, bymin, bymax)
 
+def find_coord_window_mosaic(img, xmin, xmax, ymin, ymax):
+
+    w = WCS(img)
+    x1, y1 = w.wcs_pix2world(xmin, ymin, 0)
+    x2, y2 = w.wcs_pix2world(xmin, ymax, 0)
+    x3, y3 = w.wcs_pix2world(xmax, ymin, 0)
+    x4, y4 = w.wcs_pix2world(xmax, ymax, 0)
+
+    bxmin = min(x1, x2, x3, x4)
+    bxmax = max(x1, x2, x3, x4)
+    bymin = min(y1, y2, y3, y4)
+    bymax = max(y1, y2, y3, y4)
+
+    return(bxmin, bxmax, bymin, bymax)
+
 # Convert celestial coordinates to pixels using optical catalog
 def radec2pix(target, xmin, xmax, ymin, ymax, x, y, ra, dec):
 
@@ -119,5 +134,3 @@ def radial_dist(ra1, dec1, ra2, dec2):
     dist = np.degrees(dist)*3600.
 
     return dist
-
-    

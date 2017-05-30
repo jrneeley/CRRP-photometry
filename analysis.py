@@ -32,7 +32,7 @@ folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
 variables.find_variables_by_coord(folder, target)
 sys.exit()
 
-ids, raw_phot = read_dao.read_raw('optical_alf.raw')
+ids, raw_phot = read_dao.read_raw('optical2_alf.raw')
 
 id_num = np.zeros(len(ids), dtype=int)
 x = np.zeros(len(ids), dtype=float)

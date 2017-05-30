@@ -99,7 +99,7 @@ if (start <= 4):
 ## Find appropriate window in source catalog
 if (start <=5):
 
-	ids, xcat, ycat, ra, dec = optical.read_optical_fnl(optical_folder, target_name)
+	ids, xcat, ycat, ra, dec = optical.read_optical_catalog(optical_folder, target_name)
 
 	xmin = np.zeros(num_fields)
 	xmax = np.zeros(num_fields)
