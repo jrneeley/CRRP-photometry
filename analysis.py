@@ -29,10 +29,10 @@ target = sys.argv[1]
 #    except:
 #        print 'Star '+ star + ' not found.'
 folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
-variables.find_variables_by_coord(folder, target)
+variables.find_variables_by_coord_mosaic(folder, target)
 sys.exit()
 
-ids, raw_phot = read_dao.read_raw('optical2_alf.raw')
+ids, raw_phot = read_dao.read_raw('op-I1-mosaic-alf.raw')
 
 id_num = np.zeros(len(ids), dtype=int)
 x = np.zeros(len(ids), dtype=float)

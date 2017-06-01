@@ -4,6 +4,7 @@ import glob
 import read_dao
 from astropy.io import fits
 import matplotlib.pyplot as mp
+from astropy.stats import LombScargle
 
 def make_lcv(channels, stars, dao_ids):
 
@@ -30,6 +31,7 @@ def make_lcv(channels, stars, dao_ids):
             for ind2 in range(0,len(dao_ids)):
                 alf_match = np.argwhere(alf_id == dao_ids[ind2])
                 trash1, aor_num, frame_num, trash2 = alf_list[ind].split('_')
+                trash1, aor_num, trash2 = alf_list[ind].split('_')
                 phot_data['aor'][ind2,ind] = int(aor_num)
                 phot_data['f_num'][ind2, ind] = int(frame_num)
                 phot_data['mjd'][ind2,ind] = mjd
@@ -57,6 +59,61 @@ def make_lcv(channels, stars, dao_ids):
                 f_handle = open('lcvs/'+stars[ind]+'.lcv', 'w')
             else:
                 f_handle = open('lcvs/'+stars[ind]+'.lcv', 'a')
+            np.savetxt(f_handle, data_save, comments='', fmt='%s %8i %2i %10.4f %7.3f %7.3f %6.3f %6.4f')
+            f_handle.close()
+
+def make_mosaic_lcv(channels, stars, dao_ids):
+
+    for channel in channels:
+        alf_list = glob.glob('mosaics/'+channel+'*.alf')
+
+        phot_data = np.zeros(len(dao_ids), dtype=[('filter', 'S2', len(alf_list)),
+            ('id', 'S8'), ('aor', 'i8', len(alf_list)), ('mjd', float, len(alf_list)),
+            ('f_num', 'i2', len(alf_list)), ('x', float, len(alf_list)),
+            ('y', float, len(alf_list)), ('psf_mag', float, len(alf_list)),
+            ('psf_err', float, len(alf_list))])
+
+
+        phot_data['id'] = dao_ids
+
+        for ind in range(0,len(alf_list)):
+
+            alf_id, x, y, alf_mag, alf_err = read_dao.read_alf(alf_list[ind])
+            fits_file = re.sub(".alf",".fits",alf_list[ind])
+            hdulist = fits.open(fits_file, mode='update')
+            prihdr = hdulist[0].header
+            mjd = prihdr['mjd_obs']
+
+            for ind2 in range(0,len(dao_ids)):
+                alf_match = np.argwhere(alf_id == dao_ids[ind2])
+                trash1, aor_num, trash2 = alf_list[ind].split('_')
+                phot_data['aor'][ind2,ind] = int(aor_num)
+                phot_data['f_num'][ind2, ind] = 1
+                phot_data['mjd'][ind2,ind] = mjd
+                phot_data['filter'][ind2, ind] = channel
+                if len(alf_match):
+                    phot_data['x'][ind2,ind] = x[alf_match]
+                    phot_data['y'][ind2,ind] = y[alf_match]
+                    phot_data['psf_mag'][ind2, ind] = alf_mag[alf_match]
+                    phot_data['psf_err'][ind2, ind] = alf_err[alf_match]
+                else:
+                    phot_data['x'][ind2,ind] = float('NaN')
+                    phot_data['y'][ind2,ind] = float('NaN')
+                    phot_data['psf_mag'][ind2,ind] = float('NaN')
+                    phot_data['psf_err'][ind2,ind] = float('NaN')
+        print 'Writing to file...'
+        for ind in range(0,len(dao_ids)):
+
+            data_save = np.array(zip(phot_data['filter'][ind], phot_data['aor'][ind],
+                phot_data['f_num'][ind], phot_data['mjd'][ind],
+                phot_data['x'][ind], phot_data['y'][ind],
+                phot_data['psf_mag'][ind], phot_data['psf_err'][ind]),
+                dtype=[('c1', 'S2'), ('c2', int), ('c3', int), ('c4', float),
+                ('c5', float), ('c6', float), ('c7', float), ('c8', float)])
+            if channel == channels[0]:
+                f_handle = open('mosaic_lcvs/'+stars[ind]+'.lcv', 'w')
+            else:
+                f_handle = open('mosaic_lcvs/'+stars[ind]+'.lcv', 'a')
             np.savetxt(f_handle, data_save, comments='', fmt='%s %8i %2i %10.4f %7.3f %7.3f %6.3f %6.4f')
             f_handle.close()
 
@@ -244,3 +301,98 @@ def plot_raw_lcv(lcv_file, dao_id):
             plot_file = re.sub('.lcv', '_'+filt+'_raw.pdf', lcv_file)
             mp.savefig(plot_file)
             mp.gcf().clear()
+
+def plot_raw_mosaic_lcv(lcv_file, dao_id):
+
+    dtype1 = np.dtype([('filter', 'S2'), ('aor', 'i8'), ('mjd', float),
+        ('mag', float), ('err', float)])
+    data = np.loadtxt(lcv_file, dtype=dtype1, usecols=(0,1,3,6,7))
+
+    filters = np.unique(data['filter'])
+    for filt in filters:
+
+        mag_all = data['mag'][data['filter'] == filt]
+        err_all = data['err'][data['filter'] == filt]
+        mjd_all = data['mjd'][data['filter'] == filt]
+        aor_all = data['aor'][data['filter'] == filt]
+
+
+        if ~np.isnan(mag_all).any():
+            mp.errorbar(mjd_all, mag_all, yerr=err_all, fmt='o', color='b')
+            mp.xlabel('MJD')
+            mp.ylabel('Mag')
+            mp.ylim(np.max(mag_all)+0.2, np.min(mag_all)-0.2)
+            mp.title(dao_id)
+            plot_file = re.sub('\.lcv', '_'+filt+'_raw.pdf', lcv_file)
+            mp.savefig(plot_file)
+            mp.gcf().clear()
+
+def read_optical_lcv(lcv_file):
+
+    dtype1 = np.dtype([('mag', float), ('err', float), ('filter', int),
+        ('year', int), ('day', float)])
+    data = np.loadtxt(lcv_file, dtype=dtype1, usecols=(0,1,2,4,5))
+
+    V = np.zeros((3, len(data['filter'][data['filter'] == 1])))
+    V[0][:] = data['mag'][data['filter'] == 1]
+    V[1][:] = data['err'][data['filter'] == 1]
+    V[2][:] = data['year'][data['filter'] == 1]*1000 + data['day'][data['filter'] == 1]
+    B = np.zeros((3, len(data['filter'][data['filter'] == 2])))
+    B[0][:] = data['mag'][data['filter'] == 2]
+    B[1][:] = data['err'][data['filter'] == 2]
+    B[2][:] = data['year'][data['filter'] == 2]*1000 + data['day'][data['filter'] == 2]
+    R = np.zeros((3, len(data['filter'][data['filter'] == 3])))
+    R[0][:] = data['mag'][data['filter'] == 3]
+    R[1][:] = data['err'][data['filter'] == 3]
+    R[2][:] = data['year'][data['filter'] == 3]*1000 + data['day'][data['filter'] == 3]
+    I = np.zeros((3, len(data['filter'][data['filter'] == 4])))
+    I[0][:] = data['mag'][data['filter'] == 4]
+    I[1][:] = data['err'][data['filter'] == 4]
+    I[2][:] = data['year'][data['filter'] == 4]*1000 + data['day'][data['filter'] == 4]
+    U = np.zeros((3, len(data['filter'][data['filter'] == 5])))
+    U[0][:] = data['mag'][data['filter'] == 5]
+    U[1][:] = data['err'][data['filter'] == 5]
+    U[2][:] = data['year'][data['filter'] == 5]*1000 + data['day'][data['filter'] == 5]
+
+    return U, B, V, R, I
+
+def plot_raw_optical_lcv(U, B, V, R, I):
+
+    mp.errorbar(U[2], U[0], yerr = U[1], fmt='o', color='r')
+    mp.errorbar(B[2], B[0]-1, yerr = B[1], fmt='o', color='b')
+    mp.errorbar(V[2], V[0]-2, yerr = V[1], fmt='o', color='k')
+    mp.errorbar(R[2], R[0]-3, yerr = R[1], fmt='o', color='c')
+    mp.errorbar(I[2], I[0]-5, yerr = I[1], fmt='o', color='g')
+    mags_all = np.append(U[0], B[0]-1)
+    mags_all = np.append(mags_all, V[0]-2)
+    mags_all = np.append(mags_all, R[0]-3)
+    mags_all = np.append(mags_all, I[0]-5)
+
+    mp.ylim(np.max(mags_all)+0.3, np.min(mags_all)-0.3)
+    mp.show()
+
+def plot_phased_optical_lcv(U, B, V, R, I, period, name):
+
+    Uph = np.mod((U[2])/period, 1)
+    Bph = np.mod((B[2])/period, 1)
+    Vph = np.mod((V[2])/period, 1)
+    Rph = np.mod((R[2])/period, 1)
+    Iph = np.mod((I[2])/period, 1)
+    mp.errorbar(Uph, U[0], yerr = U[1], fmt='o', color='r')
+    mp.errorbar(Bph, B[0]-1, yerr = B[1], fmt='o', color='b')
+    mp.errorbar(Vph, V[0]-2, yerr = V[1], fmt='o', color='k')
+    mp.errorbar(Rph, R[0]-3, yerr = R[1], fmt='o', color='c')
+    mp.errorbar(Iph, I[0]-5, yerr = I[1], fmt='o', color='g')
+    mags_all = np.append(U[0], B[0]-1)
+    mags_all = np.append(mags_all, V[0]-2)
+    mags_all = np.append(mags_all, R[0]-3)
+    mags_all = np.append(mags_all, I[0]-5)
+    mp.ylim(np.max(mags_all)+0.3, np.min(mags_all)-0.3)
+    mp.title(name)
+    mp.show()
+
+def find_period(mag, error, mjd):
+
+    frequency, power = LombScargle(mjd, mag, error).autopower()
+    mp.plot(frequency, power)
+    mp.show()
