@@ -5,6 +5,8 @@ import read_dao
 from astropy.io import fits
 import matplotlib.pyplot as mp
 from astropy.stats import LombScargle
+import plotting_utilities
+from scipy import stats
 
 def make_lcv(channels, stars, dao_ids):
 
@@ -327,32 +329,40 @@ def plot_raw_mosaic_lcv(lcv_file, dao_id):
             mp.savefig(plot_file)
             mp.gcf().clear()
 
-def read_optical_lcv(lcv_file):
+def read_optical_lcv(lcv_file, old=0):
 
     dtype1 = np.dtype([('mag', float), ('err', float), ('filter', int),
-        ('year', int), ('day', float)])
-    data = np.loadtxt(lcv_file, dtype=dtype1, usecols=(0,1,2,4,5))
+        ('year', int), ('day', float), ('source', 'S30')])
+    if old == 1:
+        data = np.loadtxt(lcv_file, dtype=dtype1, usecols=(0,1,2,4,5,8))
+    if old == 0:
+        data = np.loadtxt(lcv_file, dtype=dtype1, usecols=(0,1,2,4,5,10))
 
-    V = np.zeros((3, len(data['filter'][data['filter'] == 1])))
+    V = np.zeros((4, len(data['filter'][data['filter'] == 1])), dtype=object)
     V[0][:] = data['mag'][data['filter'] == 1]
     V[1][:] = data['err'][data['filter'] == 1]
     V[2][:] = data['year'][data['filter'] == 1]*1000 + data['day'][data['filter'] == 1]
-    B = np.zeros((3, len(data['filter'][data['filter'] == 2])))
+    V[3][:] = data['source'][data['filter'] == 1]
+    B = np.zeros((4, len(data['filter'][data['filter'] == 2])), dtype=object)
     B[0][:] = data['mag'][data['filter'] == 2]
     B[1][:] = data['err'][data['filter'] == 2]
     B[2][:] = data['year'][data['filter'] == 2]*1000 + data['day'][data['filter'] == 2]
-    R = np.zeros((3, len(data['filter'][data['filter'] == 3])))
-    R[0][:] = data['mag'][data['filter'] == 3]
-    R[1][:] = data['err'][data['filter'] == 3]
-    R[2][:] = data['year'][data['filter'] == 3]*1000 + data['day'][data['filter'] == 3]
-    I = np.zeros((3, len(data['filter'][data['filter'] == 4])))
-    I[0][:] = data['mag'][data['filter'] == 4]
-    I[1][:] = data['err'][data['filter'] == 4]
-    I[2][:] = data['year'][data['filter'] == 4]*1000 + data['day'][data['filter'] == 4]
-    U = np.zeros((3, len(data['filter'][data['filter'] == 5])))
+    B[3][:] = data['source'][data['filter'] == 2]
+    I = np.zeros((4, len(data['filter'][data['filter'] == 3])), dtype=object)
+    I[0][:] = data['mag'][data['filter'] == 3]
+    I[1][:] = data['err'][data['filter'] == 3]
+    I[2][:] = data['year'][data['filter'] == 3]*1000 + data['day'][data['filter'] == 3]
+    I[3][:] = data['source'][data['filter'] == 3]
+    R = np.zeros((4, len(data['filter'][data['filter'] == 4])), dtype=object)
+    R[0][:] = data['mag'][data['filter'] == 4]
+    R[1][:] = data['err'][data['filter'] == 4]
+    R[2][:] = data['year'][data['filter'] == 4]*1000 + data['day'][data['filter'] == 4]
+    R[3][:] = data['source'][data['filter'] == 4]
+    U = np.zeros((4, len(data['filter'][data['filter'] == 5])), dtype=object)
     U[0][:] = data['mag'][data['filter'] == 5]
     U[1][:] = data['err'][data['filter'] == 5]
     U[2][:] = data['year'][data['filter'] == 5]*1000 + data['day'][data['filter'] == 5]
+    U[3][:] = data['source'][data['filter'] == 5]
 
     return U, B, V, R, I
 
@@ -371,28 +381,109 @@ def plot_raw_optical_lcv(U, B, V, R, I):
     mp.ylim(np.max(mags_all)+0.3, np.min(mags_all)-0.3)
     mp.show()
 
-def plot_phased_optical_lcv(U, B, V, R, I, period, name):
+def plot_phased_optical_lcv(U, B, V, R, I, period, name, datasets):
 
-    Uph = np.mod((U[2])/period, 1)
-    Bph = np.mod((B[2])/period, 1)
-    Vph = np.mod((V[2])/period, 1)
-    Rph = np.mod((R[2])/period, 1)
-    Iph = np.mod((I[2])/period, 1)
-    mp.errorbar(Uph, U[0], yerr = U[1], fmt='o', color='r')
-    mp.errorbar(Bph, B[0]-1, yerr = B[1], fmt='o', color='b')
-    mp.errorbar(Vph, V[0]-2, yerr = V[1], fmt='o', color='k')
-    mp.errorbar(Rph, R[0]-3, yerr = R[1], fmt='o', color='c')
-    mp.errorbar(Iph, I[0]-5, yerr = I[1], fmt='o', color='g')
-    mags_all = np.append(U[0], B[0]-1)
-    mags_all = np.append(mags_all, V[0]-2)
-    mags_all = np.append(mags_all, R[0]-3)
-    mags_all = np.append(mags_all, I[0]-5)
-    mp.ylim(np.max(mags_all)+0.3, np.min(mags_all)-0.3)
-    mp.title(name)
+    fig, axs = mp.subplots(5, 1, figsize=(10,13), sharex=True)
+    filters = ['U', 'B', 'V', 'R', 'I']
+#    datasets = np.array(['danish', 'bond5', 'manu', 'Y1007', 'pwm', 'emmi8',
+#        'wfi5', 'wfi6', 'apr97', 'wfi10', 'bond7', 'not017', 'fors20602', 'fors20605'])
+#    colors = ['k', 'b', 'g', 'r', 'm', 'c', 'y', 'xkcd:coral', 'xkcd:brown',
+#            'xkcd:purple', 'xkcd:lavender', 'xkcd:yellowgreen', 'xkcd:olive', 'xkcd:gold']
+    for num in range(5):
+        if num == 0:
+            mags = U[0]
+            errs = U[1]
+            mjd = U[2]
+            source = U[3]
+        if num == 1:
+            mags = B[0]
+            errs = B[1]
+            mjd = B[2]
+            source = B[3]
+        if num == 2:
+            mags = V[0]
+            errs = V[1]
+            mjd = V[2]
+            source = V[3]
+        if num == 3:
+            mags = R[0]
+            errs = R[1]
+            mjd = R[2]
+            source = R[3]
+        if num == 4:
+            mags = I[0]
+            errs = I[1]
+            mjd = I[2]
+            source = I[3]
+
+        if len(source) == 0:
+            continue
+        sources_prefix = np.zeros(len(source), dtype='S30')
+        for ind, string in enumerate(source):
+            sources_prefix[ind] = string.split(':')[0]
+    #    datasets = np.unique(datasets_all)
+
+        phase = np.mod(mjd/period, 1)
+
+
+        for ind, dataset in enumerate(datasets):
+            ph = phase[sources_prefix == dataset]
+            mag = mags[sources_prefix == dataset]
+            err = errs[sources_prefix == dataset]
+            if len(ph) == 0:
+                continue
+            axs[num].errorbar(ph, mag, yerr=err, fmt='o', color=plotting_utilities.get_color(ind))
+        axs[num].set_ylim(np.max(mags)+0.2, np.min(mags)-0.2)
+        axs[num].set_ylabel(filters[num])
+
+    axs[0].set_title(name+' P = {}'.format(period))
+    axs[4].set_xlabel('Phase')
+#    mp.savefig('/Users/jrneeley/CRRP/OpticalCatalogs/NGC6121lcvs/phased_clement/'+name+'.pdf')
+#    mp.gcf().clear()
+#    mp.close()
     mp.show()
 
-def find_period(mag, error, mjd):
+def find_period(mag, error, mjd, initial_guess):
 
-    frequency, power = LombScargle(mjd, mag, error).autopower()
+    x = np.array(mjd, dtype=float)
+    y = np.array(mag, dtype=float)
+    er = np.array(error, dtype=float)
+
+    guess_frequency = 1/initial_guess
+    frequency = np.linspace(guess_frequency-0.05, guess_frequency+0.05, 100)
+    power = LombScargle(x, y, er).power(frequency)
     mp.plot(frequency, power)
+#    mp.show()
+
+    return 1/frequency[power == np.max(power)]#, frequency, power
+
+def period_search(V, initial_guess):
+
+    x = np.array(V[2], dtype=float)
+    y = np.array(V[0], dtype=float)
+    er = np.array(V[1], dtype=float)
+
+#    guess_frequency = 1/inital_guess
+#    frequency = np.linspace(guess_frequency-0.05, guess_frequency+0.05, 100)
+#    power = LombScargle(x, y, er).power(frequency)
+#    mp.plot(frequency, power)
+#    new_period = 1/frequency[power == np.max(power)]
+
+    periods = np.linspace(initial_guess-0.005, initial_guess+0.005, 10000)
+    best_std = 99
+    avg_std = np.zeros(len(periods))
+    for ind, period in enumerate(periods):
+        phase = np.mod(x/period, 1)
+        stds, edges, bin_num = stats.binned_statistic(phase, y, statistic=np.std, bins=100)
+        avg_std[ind] = np.mean(stds)
+        if avg_std[ind] < best_std:
+            best_std = avg_std[ind]
+            best_period = period
+    print len(periods), len(avg_std)
+    mp.plot(periods, avg_std, 'ro')
     mp.show()
+    print best_period
+
+#    mp.show()
+
+    return best_period#, frequency, power

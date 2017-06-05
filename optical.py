@@ -4,7 +4,8 @@ import numpy as np
 from astropy.io import ascii
 import coordinates
 import shutil
-
+import lightcurves
+import glob
 
 def read_optical_catalog(optical_folder, target):
 
@@ -102,3 +103,24 @@ def read_optical_catalog_old(target):
 
     print "Finished reading optical catalog."
     return(id_num, x, y, v_mags, ra, dec)
+
+def compile_datasets(optical_folder, target):
+
+    lcvs = glob.glob(optical_folder+target+'lcvs/*V*.lcv')
+    all_datasets = np.zeros(1, dtype='S30')
+    for lcv in lcvs:
+        U, B, V, R, I = lightcurves.read_optical_lcv(lcv, old=1)
+        if lcv == lcvs[0]:
+            all_datasets = np.array(U[3], dtype='S30')
+        else:
+            all_datasets = np.append(all_datasets, U[3])
+        all_datasets = np.append(all_datasets, B[3])
+        all_datasets = np.append(all_datasets, V[3])
+        all_datasets = np.append(all_datasets, R[3])
+        all_datasets = np.append(all_datasets, I[3])
+    datasets_prefix = np.zeros(len(all_datasets), dtype='S30')
+    for ind, string in enumerate(all_datasets):
+        datasets_prefix[ind] = string.split(':')[0]
+    unique, counts = np.unique(datasets_prefix, return_counts=True)
+
+    return unique[np.argsort(counts)[::-1]]
