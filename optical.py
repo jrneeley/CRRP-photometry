@@ -104,12 +104,12 @@ def read_optical_catalog_old(target):
     print "Finished reading optical catalog."
     return(id_num, x, y, v_mags, ra, dec)
 
-def compile_datasets(optical_folder, target):
+def compile_datasets(optical_folder, target, old=0):
 
     lcvs = glob.glob(optical_folder+target+'lcvs/*V*.lcv')
     all_datasets = np.zeros(1, dtype='S30')
     for lcv in lcvs:
-        U, B, V, R, I = lightcurves.read_optical_lcv(lcv, old=1)
+        U, B, V, R, I = lightcurves.read_optical_lcv(lcv, old=old)
         if lcv == lcvs[0]:
             all_datasets = np.array(U[3], dtype='S30')
         else:
