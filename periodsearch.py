@@ -19,7 +19,8 @@ print datasets
 
 for ind, lcv in enumerate(data['id']):
 
-    U, B, V, R, I = lightcurves.read_optical_lcv(lcv, old=1)
+    lcv_file = optical_folder+'/'+target+'lcvs/*V'+str(lcv)+'.lcv'
+    U, B, V, R, I = lightcurves.read_optical_lcv(lcv_file, old=1)
     period = lightcurves.period_search(V, data['period'][ind], 'V'+str(lcv), plot_save=1)
     print 'Star  Period_old  Period_new  Frequency'
     print 'V'+lcv, data['period'][ind], period, 1/period
