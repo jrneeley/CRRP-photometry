@@ -10,7 +10,7 @@ optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
 
 # Read in variable names and periods from Clement catalog
 dtype1 = np.dtype([('id', int), ('period', float)])
-data = np.loadtxt(folder+target+'-clement.txt', dtype=dtype1, usecols=(0,3))
+data = np.loadtxt(target+'-clement.txt', dtype=dtype1, usecols=(0,3))
 
 # Identify different datsets for this cluster
 datasets = optical.compile_datasets(optical_folder, target)

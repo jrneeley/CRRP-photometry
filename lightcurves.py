@@ -439,7 +439,7 @@ def plot_phased_optical_lcv(U, B, V, R, I, period, name, datasets, plot_save=0):
     axs[0].set_title(name+' P = {}'.format(period))
     axs[4].set_xlabel('Phase')
     if plot_save == 1:
-        mp.savefig(name+'-optical.pdf')
+        mp.savefig('lcvs/'+name+'-optical.pdf')
     if plot_save == 0:
         mp.show()
 #    mp.gcf().clear()
@@ -485,7 +485,7 @@ def period_search(V, initial_guess, name, plot_save=0):
 
     if plot_save == 1:
         mp.plot(periods, avg_std, 'ro')
-        mp.savefig(name+'-period.pdf')
+        mp.savefig('lcvs/'+name+'-period.pdf')
         mp.close()
 
     return best_period
