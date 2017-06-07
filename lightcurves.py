@@ -381,7 +381,7 @@ def plot_raw_optical_lcv(U, B, V, R, I):
     mp.ylim(np.max(mags_all)+0.3, np.min(mags_all)-0.3)
     mp.show()
 
-def plot_phased_optical_lcv(U, B, V, R, I, period, name, datasets):
+def plot_phased_optical_lcv(U, B, V, R, I, period, name, datasets, plot_save=0):
 
     fig, axs = mp.subplots(5, 1, figsize=(10,13), sharex=True)
     filters = ['U', 'B', 'V', 'R', 'I']
@@ -438,10 +438,12 @@ def plot_phased_optical_lcv(U, B, V, R, I, period, name, datasets):
 
     axs[0].set_title(name+' P = {}'.format(period))
     axs[4].set_xlabel('Phase')
-#    mp.savefig('/Users/jrneeley/CRRP/OpticalCatalogs/NGC6121lcvs/phased_clement/'+name+'.pdf')
+    if plot_save == 1:
+        mp.savefig(name+'-optical.pdf')
+    if plot_save == 0:
+        mp.show()
 #    mp.gcf().clear()
-#    mp.close()
-    mp.show()
+    mp.close()
 
 def find_period(mag, error, mjd, initial_guess):
 
@@ -457,7 +459,7 @@ def find_period(mag, error, mjd, initial_guess):
 
     return 1/frequency[power == np.max(power)]#, frequency, power
 
-def period_search(V, initial_guess):
+def period_search(V, initial_guess, name, plot_save=0):
 
     x = np.array(V[2], dtype=float)
     y = np.array(V[0], dtype=float)
@@ -481,7 +483,9 @@ def period_search(V, initial_guess):
                 best_std = avg_std[ind]
                 best_period = period
 
-    mp.plot(periods, avg_std, 'ro')
-    mp.show()
+    if plot_save == 1:
+        mp.plot(periods, avg_std, 'ro')
+        mp.savefig(name+'-period.pdf')
+        mp.close()
 
     return best_period
