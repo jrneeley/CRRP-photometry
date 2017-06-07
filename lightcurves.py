@@ -463,27 +463,25 @@ def period_search(V, initial_guess):
     y = np.array(V[0], dtype=float)
     er = np.array(V[1], dtype=float)
 
-#    guess_frequency = 1/inital_guess
-#    frequency = np.linspace(guess_frequency-0.05, guess_frequency+0.05, 100)
-#    power = LombScargle(x, y, er).power(frequency)
-#    mp.plot(frequency, power)
-#    new_period = 1/frequency[power == np.max(power)]
+    for iteration in range(2):
+        if iteration == 0:
+            period_offset = 0.1
+            grid_num = 1000
+        if iteration == 1:
+            period_offset = 0.001
+            grid_num = 10000
+        periods = np.linspace(initial_guess-period_offset/2, initial_guess+period_offset/2, grid_num)
+        best_std = 99
+        avg_std = np.zeros(len(periods))
+        for ind, period in enumerate(periods):
+            phase = np.mod(x/period, 1)
+            stds, edges, bin_num = stats.binned_statistic(phase, y, statistic=np.std, bins=100)
+            avg_std[ind] = np.mean(stds)
+            if avg_std[ind] < best_std:
+                best_std = avg_std[ind]
+                best_period = period
 
-    periods = np.linspace(initial_guess-0.005, initial_guess+0.005, 10000)
-    best_std = 99
-    avg_std = np.zeros(len(periods))
-    for ind, period in enumerate(periods):
-        phase = np.mod(x/period, 1)
-        stds, edges, bin_num = stats.binned_statistic(phase, y, statistic=np.std, bins=100)
-        avg_std[ind] = np.mean(stds)
-        if avg_std[ind] < best_std:
-            best_std = avg_std[ind]
-            best_period = period
-    print len(periods), len(avg_std)
     mp.plot(periods, avg_std, 'ro')
     mp.show()
-    print best_period
 
-#    mp.show()
-
-    return best_period#, frequency, power
+    return best_period
