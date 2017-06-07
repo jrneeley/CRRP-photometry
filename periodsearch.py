@@ -23,5 +23,5 @@ for ind, lcv in enumerate(data['id']):
     U, B, V, R, I = lightcurves.read_optical_lcv(lcv_file, old=1)
     period = lightcurves.period_search(V, data['period'][ind], 'V'+str(lcv), plot_save=1)
     print 'Star  Period_old  Period_new  Frequency'
-    print 'V'+lcv, data['period'][ind], period, 1/period
+    print 'V'+str(lcv), data['period'][ind], period, 1/period
     lightcurves.plot_phased_optical_lcv(U, B, V, R, I, period, 'V'+str(lcv), datasets, plot_save=1)
