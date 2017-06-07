@@ -465,6 +465,8 @@ def period_search(V, initial_guess, name, plot_save=0):
     y = np.array(V[0], dtype=float)
     er = np.array(V[1], dtype=float)
 
+    best_period = initial_guess
+
     for iteration in range(2):
         if iteration == 0:
             period_offset = 0.1
