@@ -480,14 +480,15 @@ def period_search(V, initial_guess, name, plot_save=0):
         for ind, period in enumerate(periods):
             phase = np.mod(x/period, 1)
             stds, edges, bin_num = stats.binned_statistic(phase, y, statistic=np.std, bins=100)
-            avg_std[ind] = np.mean(stds)
+            avg_std[ind] = np.nanmean(stds)
             if avg_std[ind] < best_std:
                 best_std = avg_std[ind]
                 best_period = period
-
+    mp.plot(periods, avg_std, 'ro')
     if plot_save == 1:
-        mp.plot(periods, avg_std, 'ro')
         mp.savefig('lcvs/'+name+'-period.pdf')
-        mp.close()
+    if plot_save == 0:
+        mp.show()
+    mp.close()
 
     return best_period
