@@ -60,6 +60,7 @@ def find_variables_by_coord_mosaic(optical_folder, target):
     dtype1 = np.dtype([('id', 'S8'), ('ra', 'S10'), ('dec', 'S11'), ('period', float),
     ('var_type', 'S8')])
     data = np.loadtxt(target+'-clement.txt', dtype=dtype1)
+
     RRc = data[:][data['var_type'] == 'RR1']
     RRab = data[:][data['var_type'] == 'RR0']
 
@@ -103,5 +104,8 @@ def find_variables_by_coord_mosaic(optical_folder, target):
                 lightcurves.make_mosaic_lcv(['I1'], [variable_star], [star])
         #    lightcurves.phase_lcv('lcvs/'+variable_star+'.lcv', data['period'][obj], 50000, bin=0)
             lightcurves.plot_raw_mosaic_lcv('mosaic_lcvs/'+variable_star+'.lcv', star)
+
+
+
 # Calculate the Welch-Stetson variability index
 # def calculate_variability_index():

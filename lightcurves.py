@@ -7,6 +7,9 @@ import matplotlib.pyplot as mp
 from astropy.stats import LombScargle
 import plotting_utilities
 from scipy import stats
+from scipy.interpolate import interp1d
+from scipy import signal
+
 
 def make_lcv(channels, stars, dao_ids):
 
@@ -14,7 +17,7 @@ def make_lcv(channels, stars, dao_ids):
         alf_list = glob.glob('all/'+channel+'*.alf')
 
         phot_data = np.zeros(len(dao_ids), dtype=[('filter', 'S2', len(alf_list)),
-            ('id', 'S8'), ('aor', 'i8', len(alf_list)), ('mjd', float, len(alf_list)),
+            ('id', 'S8'), ('aor', int, len(alf_list)), ('mjd', float, len(alf_list)),
             ('f_num', 'i2', len(alf_list)), ('x', float, len(alf_list)),
             ('y', float, len(alf_list)), ('psf_mag', float, len(alf_list)),
             ('psf_err', float, len(alf_list))])
@@ -70,8 +73,8 @@ def make_mosaic_lcv(channels, stars, dao_ids):
         alf_list = glob.glob('mosaics/'+channel+'*.alf')
 
         phot_data = np.zeros(len(dao_ids), dtype=[('filter', 'S2', len(alf_list)),
-            ('id', 'S8'), ('aor', 'i8', len(alf_list)), ('mjd', float, len(alf_list)),
-            ('f_num', 'i2', len(alf_list)), ('x', float, len(alf_list)),
+            ('id', 'S8'), ('aor', int, len(alf_list)), ('mjd', float, len(alf_list)),
+            ('f_num', int, len(alf_list)), ('x', float, len(alf_list)),
             ('y', float, len(alf_list)), ('psf_mag', float, len(alf_list)),
             ('psf_err', float, len(alf_list))])
 
@@ -173,7 +176,7 @@ def compare_phased_lcv(lcv_file):
 
 def phase_lcv(lcv_file, period, T0, bin=1, save=1, plot=0):
 
-    dtype1 = np.dtype([('filter', 'S2'), ('aor', 'i8'), ('mjd', float),
+    dtype1 = np.dtype([('filter', 'S2'), ('aor', int), ('mjd', float),
         ('mag', float), ('err', float)])
     data = np.loadtxt(lcv_file, dtype=dtype1, usecols=(0,1,3,6,7))
 
@@ -255,7 +258,7 @@ def phase_lcv(lcv_file, period, T0, bin=1, save=1, plot=0):
 
 def plot_raw_lcv(lcv_file, dao_id):
 
-    dtype1 = np.dtype([('filter', 'S2'), ('aor', 'i8'), ('mjd', float),
+    dtype1 = np.dtype([('filter', 'S2'), ('aor', int), ('mjd', float),
         ('mag', float), ('err', float)])
     data = np.loadtxt(lcv_file, dtype=dtype1, usecols=(0,1,3,6,7))
 
@@ -306,7 +309,7 @@ def plot_raw_lcv(lcv_file, dao_id):
 
 def plot_raw_mosaic_lcv(lcv_file, dao_id):
 
-    dtype1 = np.dtype([('filter', 'S2'), ('aor', 'i8'), ('mjd', float),
+    dtype1 = np.dtype([('filter', 'S2'), ('aor', int), ('mjd', float),
         ('mag', float), ('err', float)])
     data = np.loadtxt(lcv_file, dtype=dtype1, usecols=(0,1,3,6,7))
 
@@ -459,26 +462,33 @@ def find_period(mag, error, mjd, initial_guess):
 
     return 1/frequency[power == np.max(power)]#, frequency, power
 
-def period_search(V, initial_guess, name, plot_save=0):
+def period_search(V, initial_guess, name, plot_save=0, error_threshold=0.05):
 
-    x = np.array(V[2], dtype=float)
-    y = np.array(V[0], dtype=float)
-    er = np.array(V[1], dtype=float)
+    x = np.array(V[2][V[1] < error_threshold], dtype=float)
+    y = np.array(V[0][V[1] < error_threshold], dtype=float)
+    er = np.array(V[1][V[1] < error_threshold], dtype=float)
 
     best_period = initial_guess
-
-    for iteration in range(3):
+    fig, axs = mp.subplots(4, 1, figsize=(8,10))
+    best_std = 99
+    for iteration in range(4):
         if iteration == 0:
             period_offset = 0.1
             grid_num = 1000
+    #    if iteration == 1:
+    #        period_offset = 0.05
+    #        grid_num = 1000
         if iteration == 1:
             period_offset = 0.01
-            grid_num = 1000
+            grid_num = 5000
         if iteration == 2:
             period_offset = 0.001
+            grid_num = 5000
+        if iteration == 3:
+            period_offset = 0.0001
             grid_num = 10000
-        periods = np.linspace(initial_guess-period_offset/2, initial_guess+period_offset/2, grid_num)
-        best_std = 99
+        periods = np.linspace(best_period-period_offset/2, best_period+period_offset/2, num=grid_num+1)
+
         avg_std = np.zeros(len(periods))
         for ind, period in enumerate(periods):
             phase = np.mod(x/period, 1)
@@ -487,12 +497,18 @@ def period_search(V, initial_guess, name, plot_save=0):
             if avg_std[ind] < best_std:
                 best_std = avg_std[ind]
                 best_period = period
-        mp.plot(periods, avg_std, 'ro')
-        mp.axvline(best_period)
-        if plot_save == 1:
-            mp.savefig('lcvs/'+name+'-period.pdf')
-        if plot_save == 0:
-            mp.show()
+        # Apply a median filter
+        yy_smoothed = signal.medfilt(avg_std, 101)
+        if iteration == 3:
+            best_period = periods[yy_smoothed == yy_smoothed.min()][0]
+        axs[iteration].plot(periods, avg_std, 'ro')
+        axs[iteration].plot(periods, yy_smoothed, 'b-')
+        axs[iteration].axvline(best_period)
+    axs[3].set_xlabel('Period (days)')
+    if plot_save == 1:
+        mp.savefig('lcvs/'+name+'-period.pdf')
+    if plot_save == 0:
+        mp.show()
     mp.close()
 
     return best_period

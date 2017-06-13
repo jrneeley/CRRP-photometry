@@ -50,7 +50,7 @@ for ind, lcv in enumerate(data['id']):
 ## Find periods of IRAC lightcurves
 lcvs = glob.glob('lcvs/matches/*.lcv')
 for lcv in lcvs:
-    dtype1 = np.dtype([('filter', 'S2'), ('aor', 'i8'), ('mjd', float),
+    dtype1 = np.dtype([('filter', 'S2'), ('aor', int), ('mjd', float),
         ('mag', float), ('err', float)])
     data = np.loadtxt(lcv, dtype=dtype1, usecols=(0,1,3,6,7))
 

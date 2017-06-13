@@ -28,8 +28,8 @@ def read_raw(raw_file):
 
 def read_mag(mag_file):
 
-    dtype1 = np.dtype([('id', 'i8'), ('x', 'f7'), ('y', 'f7'), ('mag', 'f6'),
-        ('err', 'f6')])
+    dtype1 = np.dtype([('id', int), ('x', float), ('y', float), ('mag', float),
+        ('err', float)])
     data = np.loadtxt(mag_file, dtype=dtype1, usecols=(0,1,2,3,4), skiprows=3)
 
     return data['id'], data['x'], data['y'], data['mag'], data['err']
@@ -73,7 +73,7 @@ def read_nmg(nmg_file):
 
 def read_lst(lst_file):
 
-    dtype1 = np.dtype([('id', 'i8'), ('x', 'f8'), ('y', 'f8')])
+    dtype1 = np.dtype([('id', int), ('x', float), ('y', float)])
     data = np.loadtxt(lst_file, dtype = dtype1, usecols=(0,1,2), skiprows=3)
 
     ids = data['ids']
@@ -85,7 +85,7 @@ def read_lst(lst_file):
 
 def read_alf(alf_file):
 
-    dtype1 = np.dtype([('id', 'i8'), ('x', 'f7'), ('y', 'f7'), ('mag', 'f6'), ('err', 'f6')])
+    dtype1 = np.dtype([('id', int), ('x', float), ('y', float), ('mag', float), ('err', float)])
     data = np.loadtxt(alf_file, dtype=dtype1, usecols=(0,1,2,3,4), skiprows=3)
 
     ids = data['id']

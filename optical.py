@@ -13,7 +13,9 @@ def read_optical_catalog(optical_folder, target):
 
     print "Reading optical catalog for "+target+"..."
 
-    dtype1 = np.dtype([('id', 'I5'), ('x', 'f8'), ('y', 'f8'), ('ra_h', 'i2'), ('ra_m', 'i2'), ('ra_s', 'f5'), ('dec_d', 'i3'), ('dec_m', 'i2'), ('dec_s', 'f4')])
+    dtype1 = np.dtype([('id', int), ('x', float), ('y', float), ('ra_h', int),
+        ('ra_m', int), ('ra_s', float), ('dec_d', int), ('dec_m', int),
+        ('dec_s', float)])
     data = np.loadtxt(catalog, dtype=dtype1, skiprows=1, usecols=[0,1,2,22,23,24,25,26,27])
 
     id_num = data['id']
@@ -37,7 +39,9 @@ def read_optical_fnl(optical_folder, target):
 
     print "Reading optical catalog for "+target+"..."
 
-    dtype1 = np.dtype([('id', 'I5'), ('x', 'f8'), ('y', 'f8'), ('ra_h', 'i2'), ('ra_m', 'i2'), ('ra_s', 'f5'), ('dec_d', 'i3'), ('dec_m', 'i2'), ('dec_s', 'f4')])
+    dtype1 = np.dtype([('id', int), ('x', float), ('y', float), ('ra_h', int),
+        ('ra_m', int), ('ra_s', float), ('dec_d', int), ('dec_m', int),
+        ('dec_s', float)])
     data = np.loadtxt(catalog, dtype=dtype1, skiprows=3, usecols=[0,1,2,25,26,27,28,29,30])
 
     id_num = data['id']

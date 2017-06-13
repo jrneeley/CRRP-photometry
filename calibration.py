@@ -18,7 +18,8 @@ def find_stars_in_cat(optical_folder, target, channel):
     cat_ids, x, y, ra, dec = optical.read_optical_catalog(optical_folder, target)
 
     reg_file = open(channel+'.reg').read().replace(':', ' ')
-    dtype1 = np.dtype([('ra_h', 'i2'), ('ra_m', 'i2'), ('ra_s', 'f6'), ('dec_d', 'i3'), ('dec_m', 'i2'), ('dec_s', 'f5')])
+    dtype1 = np.dtype([('ra_h', int), ('ra_m', int), ('ra_s', float),
+        ('dec_d', int), ('dec_m', int), ('dec_s', float)])
     data = np.loadtxt(StringIO.StringIO(reg_file), dtype=dtype1)
     ra_h = data['ra_h']
     ra_m = data['ra_m']
@@ -32,7 +33,7 @@ def find_stars_in_cat(optical_folder, target, channel):
     alf_list = glob.glob('all/'+channel+'*.alf')
 
     phot_data = np.zeros(len(cal_ra), dtype=[('id', 'S8'), ('ra', float), ('dec', float),
-        ('neigh', int), ('aor', 'i8', len(alf_list)), ('f_num', 'i2', len(alf_list)),
+        ('neigh', int), ('aor', int, len(alf_list)), ('f_num', int, len(alf_list)),
         ('x', float, len(alf_list)), ('y', float, len(alf_list)),
         ('psf_mag', float, len(alf_list)), ('psf_err', float, len(alf_list))])
     neighbors = np.zeros(len(cal_ra), dtype=object)
@@ -114,7 +115,8 @@ def find_zp(channel, verbose=0):
         dec[ind] = float(head3)
         num_neighbors[ind] = int(head4)
 
-        dtype1 = np.dtype([('psf_mag',float), ('psf_err', float), ('ap_mag', float), ('ap_err', float)])
+        dtype1 = np.dtype([('psf_mag',float), ('psf_err', float),
+            ('ap_mag', float), ('ap_err', float)])
         data = np.loadtxt(phot, dtype=dtype1, usecols=(4,5,6,7), skiprows=1)
 
         if np.all(np.isnan(data['ap_mag'])) :
@@ -226,7 +228,7 @@ def find_zp(channel, verbose=0):
 def find_zp_single_frame(infile):
 
 
-    dtype1 = np.dtype([('id', 'i8'), ('x', float), ('y', float), ('ap_mag', float),
+    dtype1 = np.dtype([('id', int), ('x', float), ('y', float), ('ap_mag', float),
         ('ap_er', float), ('psf_mag', float), ('psf_er', float)])
     data = np.loadtxt(infile, dtype = dtype1)
 
