@@ -467,11 +467,14 @@ def period_search(V, initial_guess, name, plot_save=0):
 
     best_period = initial_guess
 
-    for iteration in range(2):
+    for iteration in range(3):
         if iteration == 0:
             period_offset = 0.1
             grid_num = 1000
         if iteration == 1:
+            period_offset = 0.01
+            grid_num = 1000
+        if iteration == 2:
             period_offset = 0.001
             grid_num = 10000
         periods = np.linspace(initial_guess-period_offset/2, initial_guess+period_offset/2, grid_num)
@@ -484,11 +487,12 @@ def period_search(V, initial_guess, name, plot_save=0):
             if avg_std[ind] < best_std:
                 best_std = avg_std[ind]
                 best_period = period
-    mp.plot(periods, avg_std, 'ro')
-    if plot_save == 1:
-        mp.savefig('lcvs/'+name+'-period.pdf')
-    if plot_save == 0:
-        mp.show()
+        mp.plot(periods, avg_std, 'ro')
+        mp.axvline(best_period)
+        if plot_save == 1:
+            mp.savefig('lcvs/'+name+'-period.pdf')
+        if plot_save == 0:
+            mp.show()
     mp.close()
 
     return best_period
