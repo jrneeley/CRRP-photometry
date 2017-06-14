@@ -6,6 +6,8 @@ import coordinates
 import shutil
 import lightcurves
 import glob
+from astropy.time import Time
+import plotting_utilities
 
 def read_optical_catalog(optical_folder, target):
 
@@ -116,15 +118,32 @@ def compile_datasets(optical_folder, target, old=0):
         U, B, V, R, I = lightcurves.read_optical_lcv(lcv, old=old)
         if lcv == lcvs[0]:
             all_datasets = np.array(U[3], dtype='S30')
+            all_jds = np.array(U[2], dtype=float)
         else:
             all_datasets = np.append(all_datasets, U[3])
+            all_jds = np.append(all_jds, U[2])
         all_datasets = np.append(all_datasets, B[3])
         all_datasets = np.append(all_datasets, V[3])
         all_datasets = np.append(all_datasets, R[3])
         all_datasets = np.append(all_datasets, I[3])
+        all_jds = np.append(all_jds, B[2])
+        all_jds = np.append(all_jds, V[2])
+        all_jds = np.append(all_jds, R[2])
+        all_jds = np.append(all_jds, I[2])
     datasets_prefix = np.zeros(len(all_datasets), dtype='S30')
     for ind, string in enumerate(all_datasets):
         datasets_prefix[ind] = string.split(':')[0]
     unique, counts = np.unique(datasets_prefix, return_counts=True)
+
+    dataset_names = unique[np.argsort(counts)[::-1]]
+    dataset_counts = counts[np.argsort(counts)[::-1]]
+    print '\n\nDatasets:\n'
+    for ind, dataset in enumerate(dataset_names):
+        jds = all_jds[datasets_prefix == dataset]
+        t_min = Time(jds.min(), format='jd')
+        t_max = Time(jds.max(), format='jd')
+        t_min.out_subfmt = 'date'
+        t_max.out_subfmt = 'date'
+        print '%10s %6i %s %s %s' % (dataset, dataset_counts[ind], t_min.iso, t_max.iso, plotting_utilities.get_color(ind))
 
     return unique[np.argsort(counts)[::-1]]

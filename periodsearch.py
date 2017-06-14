@@ -14,9 +14,8 @@ data = np.loadtxt(target+'-clement.txt', dtype=dtype1, usecols=(0,3))
 
 # Identify different datsets for this cluster
 datasets = optical.compile_datasets(optical_folder, target, old=0)
-print '\n\nDatasets:'
-print datasets
-print '\n\nStar  Period_old  Period_new  Diff'
+
+print '\n\nStar  Period_old  Period_new'
 
 
 for ind, lcv in enumerate(data['id']):
@@ -25,7 +24,7 @@ for ind, lcv in enumerate(data['id']):
     try:
         U, B, V, R, I = lightcurves.read_optical_lcv(lcv_file, old=0)
         period = lightcurves.period_search(V, data['period'][ind], 'V'+str(lcv), plot_save=1)
-        print 'V'+str(lcv), data['period'][ind], period, data['period'][ind]-period
+        print '%4s %0.4f %0.8f' % ('V'+str(lcv), data['period'][ind], period)
         lightcurves.plot_phased_optical_lcv(U, B, V, R, I, period, 'V'+str(lcv), datasets, plot_save=1)
     except:
-        print 'V'+str(lcv), data['period'][ind], 'Not found'
+        print '%4s %0.4f %s' % ('V'+str(lcv), data['period'][ind], 'Not found')
