@@ -99,7 +99,7 @@ if (start <=5):
 	ymin = np.min(data['y'])
 	ymax = np.max(data['y'])
 
-	ids, xcat, ycat, ra, dec = optical.read_optical_catalog(optical_folder, target_name)
+	ids, xcat, ycat, ra, dec = optical.read_optical_fnl(optical_folder, target_name)
 
 	print "Calculating field boundaries..."
 	x1, x2, y1, y2 = coordinates.find_coord_window_mosaic(dn_list[0], xmin, xmax, ymin, ymax)

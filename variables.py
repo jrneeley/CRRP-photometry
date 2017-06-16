@@ -66,7 +66,7 @@ def find_variables_by_coord_mosaic(optical_folder, target):
 
     ra_variables, dec_variables = coordinates.radec_string2deg(data['ra'], data['dec'])
 
-    ids, xcat, ycat, ra, dec = optical.read_optical_catalog(optical_folder, target)
+    ids, xcat, ycat, ra, dec = optical.read_optical_fnl(optical_folder, target)
     # Limit search to horizontal branch
 #    ids, xcat, ycat, ra, dec = optical.read_optical_catalog(optical_folder, target+'-HB')
 
