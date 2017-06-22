@@ -78,8 +78,8 @@ def find_variables_fnl(optical_folder, target):
             master_id.append(temp[0])
             variable_id.append(temp[-1])
 
-    data_save = np.array(zip(variable_id, master_id), dtype=[('c1', 'S8'), ('c2', 'I8')])
-    np.savetxt('PeterIDs.txt', data_save, comments='', fmt='%s %i')
+    data_save = np.array(zip(variable_id, master_id), dtype=[('c1', 'S10'), ('c2', int)])
+    np.savetxt('PeterIDs.txt', data_save, comments='', fmt='%10s %8i')
 
 
 
@@ -112,7 +112,7 @@ def read_optical_catalog_old(target):
 
 def compile_datasets(optical_folder, target, old=0):
 
-    lcvs = glob.glob(optical_folder+target+'lcvs/*V*.lcv')
+    lcvs = glob.glob(optical_folder+target+'lcvs/*.lcv')
     all_datasets = np.zeros(1, dtype='S30')
     for lcv in lcvs:
         U, B, V, R, I = lightcurves.read_optical_lcv(lcv, old=old)

@@ -16,8 +16,31 @@ import numpy as np
 
 target_name = sys.argv[1]
 #channel = sys.argv[2]
-
 optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
+
+dtype1 = np.dtype([('id', 'S10'), ('period', float)])
+data = np.loadtxt('PeterPeriods.txt', dtype=dtype1)
+
+datasets = optical.compile_datasets(optical_folder, target_name, old=0)
+
+for star, period in zip(data['id'], data['period']):
+
+    lcv_file = optical_folder+target_name+'lcvs/'+target_name+star+'.lcv'
+    U, B, V, R, I = lightcurves.read_optical_lcv(lcv_file, old=0)
+    lightcurves.plot_phased_optical_lcv(U, B, V, R, I, period, star, datasets, plot_save=1)
+
+sys.exit()
+
+dtype1 = np.dtype([('star', 'S10'), ('dao_id', int)])
+data = np.loadtxt('PeterIDs.txt', dtype=dtype1)
+
+for ind, star in enumerate(data['star']):
+
+    lightcurves.make_mosaic_lcv(['I1'], [star], [data['dao_id'][ind]])
+    lightcurves.plot_raw_mosaic_lcv('mosaic_lcvs/'+star+'.lcv', data['dao_id'][ind])
+
+sys.exit()
+
 
 datasets = optical.compile_datasets(optical_folder, target_name)
 print '\n\nDatasets: '

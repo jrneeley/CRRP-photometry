@@ -9,23 +9,23 @@ import plotting_utilities
 from scipy import stats
 from scipy.interpolate import interp1d
 from scipy import signal
+from matplotlib import gridspec
 
 
 
-
-def make_lcv(channels, stars, dao_ids):
+def make_lcv(channels, stars, dao_id):
 
     for channel in channels:
         alf_list = glob.glob('all/'+channel+'*.alf')
 
         phot_data = np.zeros(len(dao_ids), dtype=[('filter', 'S2', len(alf_list)),
             ('id', 'S8'), ('aor', int, len(alf_list)), ('mjd', float, len(alf_list)),
-            ('f_num', 'i2', len(alf_list)), ('x', float, len(alf_list)),
+            ('f_num', int, len(alf_list)), ('x', float, len(alf_list)),
             ('y', float, len(alf_list)), ('psf_mag', float, len(alf_list)),
             ('psf_err', float, len(alf_list))])
 
 
-        phot_data['id'] = dao_ids
+        phot_data['id'] = dao_id
 
         for ind in range(0,len(alf_list)):
 
@@ -473,37 +473,31 @@ def period_search(V, initial_guess, name, plot_save=0, error_threshold=0.05):
     best_period = initial_guess
     fig, axs = mp.subplots(4, 1, figsize=(8,10))
 
+    search_range = 0.01
+    grid_num = 1000
+
     for iteration in range(4):
-        if iteration == 0:
-            period_offset = 0.05
-            grid_num = 5000
-        if iteration == 1:
-            period_offset = 0.01
-            grid_num = 5000
-        if iteration == 2:
-            period_offset = 0.001
-            grid_num = 5000
-        if iteration == 3:
-            period_offset = 0.0001
-            grid_num = 10000
-        periods = np.linspace(best_period-period_offset/2, best_period+period_offset/2, num=grid_num+1)
         best_std = 99
+        if iteration != 0:
+            search_range = search_range/(2*iteration)
+            grid_num = search_range*10**(iteration+5)
+        min_period = best_period - search_range/2
+        max_period = best_period + search_range/2
+        periods = np.linspace(min_period, max_period, num=grid_num+1)
         avg_std = np.zeros(len(periods))
         for ind, period in enumerate(periods):
             phase = np.mod(x/period, 1)
             stds, edges, bin_num = stats.binned_statistic(phase, y, statistic=np.std, bins=100)
             avg_std[ind] = np.nanmean(stds)
-            if avg_std[ind] < best_std:
-                best_std = avg_std[ind]
-                best_period = period
+        order = np.argsort(avg_std)
+        best_period = periods[order[0]]
         # Apply a median filter
         yy_smoothed = signal.medfilt(avg_std, 101)
-        if iteration == 3:
-            best_period = periods[yy_smoothed == yy_smoothed.min()][0]
+        print iteration, search_range, grid_num, best_period
         axs[iteration].plot(periods, avg_std, 'ro')
         axs[iteration].plot(periods, yy_smoothed, 'b-')
         axs[iteration].axvline(best_period)
-    axs[3].set_xlabel('Period (days)')
+    axs[iteration].set_xlabel('Period (days)')
     if plot_save == 1:
         mp.savefig('lcvs/'+name+'-period.pdf')
     if plot_save == 0:
@@ -520,18 +514,18 @@ def period_search_LS(V, B, initial_guess, name, plot_save=0, error_threshold=0.0
     x2 = np.array(B[2][B[1] < error_threshold], dtype=float)
     y2 = np.array(B[0][B[1] < error_threshold], dtype=float)
     er2 = np.array(B[1][B[1] < error_threshold], dtype=float)
-    fig, axs = mp.subplots(4, 2, figsize=(8,10))
+    fig, axs = mp.subplots(3, 2, figsize=(8,10))
 
     best_period = initial_guess
-    for iteration in range(4):
+    for iteration in range(3):
         if iteration == 0:
-            offset = 0.05
+            offset = 0.01
         if iteration == 1:
-            offset = 0.005
+            offset = 0.001
         if iteration == 2:
-            offset = 0.0005
+            offset = 0.0001
         if iteration == 3:
-            offset = 0.00005
+            offset = 0.00001
         freq_max = 1/(best_period-offset)
         freq_min = 1/(best_period+offset)
         frequency = np.linspace(freq_min, freq_max, 1000)
@@ -539,8 +533,8 @@ def period_search_LS(V, B, initial_guess, name, plot_save=0, error_threshold=0.0
         power2 = LombScargle(x2, y2, er2).power(frequency)
         best_period = 1/frequency[power == power.max()]
         best_period2 = 1/frequency[power2 == power2.max()]
-        axs[iteration, 0].plot(frequency, power)
-        axs[iteration, 1].plot(frequency, power2)
+        axs[iteration, 0].plot(1/frequency, power)
+        axs[iteration, 1].plot(1/frequency, power2)
         print best_period
     if plot_save == 1:
         mp.savefig('lcvs/'+name+'-LS.pdf')
@@ -556,122 +550,146 @@ def period_search_hybrid(V, initial_guess, name, plot_save=0, error_threshold=0.
     y = np.array(V[0][V[1] < error_threshold], dtype=float)
     er = np.array(V[1][V[1] < error_threshold], dtype=float)
 
-    fig, axs = mp.subplots(4, 1, figsize=(8,10))
+    fig = mp.figure(figsize=(10, 12))
+#    gs = gridspec.GridSpec(4,3)
+#    fig, axs = mp.subplots(4, 1, figsize=(8,10))
 
     best_period = initial_guess
-    for iteration in range(4):
-        if iteration == 0:
-            offset = 0.05
-            freq_max = 1/(best_period-offset)
-            freq_min = 1/(best_period+offset)
+    period_range = 0.02
+    if initial_guess == np.nan:
+        best_period = 0.5
+        period_range = 0.4
+# Do initial Lomb Scargle
+    freq_max = 1/(best_period-period_range/2)
+    freq_min = 1/(best_period+period_range/2)
+    frequency = np.linspace(freq_min, freq_max, 1000)
+    power = LombScargle(x, y, er).power(frequency)
+    order = np.argsort(power)
+    candidate_periods = 1/frequency[order[-3:]]
+#    print candidate_periods
+    ax1 = mp.subplot2grid((4,3), (0,0), colspan=3)
+    ax1.plot(1/frequency, power)
+
+    best_periods = np.zeros(3)
+    best_stds = np.zeros(3)
+    for ind, period in enumerate(candidate_periods):
+        ax1.axvline(period, color='r')
+        period_range = 0.02
+        for iteration in range(3):
+
+            period_range = period_range/10
+
+            freq_max = 1/(period-period_range/2)
+            freq_min = 1/(period+period_range/2)
             frequency = np.linspace(freq_min, freq_max, 1000)
             power = LombScargle(x, y, er).power(frequency)
-            best_period = 1/frequency[power == power.max()]
-            axs[iteration].plot(1/frequency, power)
-            #print best_period
-        if iteration == 1:
-            offset = 0.005
-            grid_num = 5000
-            periods = np.linspace(best_period-offset, best_period+offset, num=grid_num+1)
-            best_std = 99
-            avg_std = np.zeros(len(periods))
-            for ind, period in enumerate(periods):
-                phase = np.mod(x/period, 1)
-                stds, edges, bin_num = stats.binned_statistic(phase, y, statistic=np.std, bins=100)
-                avg_std[ind] = np.nanmean(stds)
-                if avg_std[ind] < best_std:
-                    best_std = avg_std[ind]
-                    best_period = period
-            # Apply a median filter
-            yy_smoothed = signal.medfilt(avg_std, 101)
-            axs[iteration].plot(periods, avg_std, 'ro')
-            axs[iteration].plot(periods, yy_smoothed, 'b-')
-            axs[iteration].axvline(best_period)
-            #print best_period
-        if iteration == 2:
-            offset = 0.0005
-            freq_max = 1/(best_period-offset)
-            freq_min = 1/(best_period+offset)
-            frequency = np.linspace(freq_min, freq_max, 1000)
-            power = LombScargle(x, y, er).power(frequency)
-            best_period = 1/frequency[power == power.max()]
-            axs[iteration].plot(1/frequency, power)
-            #print best_period
-        if iteration == 3:
-            offset = 0.00005
-            grid_num = 5000
-            periods = np.linspace(best_period-offset, best_period+offset, num=grid_num+1)
-            best_std = 99
-            avg_std = np.zeros(len(periods))
-            for ind, period in enumerate(periods):
-                phase = np.mod(x/period, 1)
-                stds, edges, bin_num = stats.binned_statistic(phase, y, statistic=np.std, bins=100)
-                avg_std[ind] = np.nanmean(stds)
-                if avg_std[ind] < best_std:
-                    best_std = avg_std[ind]
-                    best_period = period
-            # Apply a median filter
-            yy_smoothed = signal.medfilt(avg_std, 101)
-            axs[iteration].plot(periods, avg_std, 'ro')
-            axs[iteration].plot(periods, yy_smoothed, 'b-')
-            axs[iteration].axvline(best_period)
-            #print best_period
+            order = np.argsort(power)
+            best_periods[ind] = 1/frequency[order[-1]]
+            ax = mp.subplot2grid((4,3), (iteration+1, ind))
+            ax.plot(1/frequency, power)
+
+    #    print best_period
+
+        search_range = 0.0001
+        grid_num = 10000
+        min_period = best_periods[ind] - search_range/2
+        max_period = best_periods[ind] + search_range/2
+        periods = np.linspace(min_period, max_period, num=grid_num+1)
+        avg_std = np.zeros(len(periods))
+        for ind2, trial_period in enumerate(periods):
+            phase = np.mod(x/trial_period, 1)
+            stds, edges, bin_num = stats.binned_statistic(phase, y, statistic=np.std, bins=100)
+            avg_std[ind2] = np.nanmean(stds)
+        order = np.argsort(avg_std)
+        best_periods[ind] = periods[order[0]]
+        best_stds[ind] = avg_std[order[0]]
+        ax = mp.subplot2grid((4,3), (3, ind))
+        ax.plot(periods, avg_std, 'ro')
+        ax.axvline(best_periods[ind])
+#    print best_periods, best_stds
+    #    axs[3].plot(periods, avg_std, 'ro')
+    #    axs[3].axvline(best_period)
     if plot_save == 1:
         mp.savefig('lcvs/'+name+'-hybrid.pdf')
     if plot_save == 0:
         mp.show()
     mp.close()
 
-    return best_period
-def period_search_refine(V, initial_guess, name, plot_save=0, error_threshold=0.05):
+    return best_periods[best_stds == np.min(best_stds)]
+
+
+def period_search_peter(V, initial_guess, name, plot_save=0, error_threshold=0.05):
 
     x = np.array(V[2][V[1] < error_threshold], dtype=float)
     y = np.array(V[0][V[1] < error_threshold], dtype=float)
     er = np.array(V[1][V[1] < error_threshold], dtype=float)
 
+
     best_period = initial_guess
-#    fig, axs = mp.subplots(2, 1, figsize=(8,10))
+    search_range = 1
+    grid_num = 10000
+    mp.figure(figsize=(15,8))
+#    fig, axs = mp.subplots(6, 1, figsize=(8,10))
+#    for iteration in range(2):
+#        if iteration != 0:
+#            search_range = search_range/10
 
-    period_offset = 0.1
-    grid_num = 5000
-
-    periods = np.linspace(best_period-period_offset/2, best_period+period_offset/2, num=grid_num+1)
-    best_std = 99
-    avg_std = np.zeros(len(periods))
+#    min_period = best_period - search_range/2
+#    max_period = best_period + search_range/2
+    min_period = initial_guess-0.05
+    max_period = initial_guess+0.05
+    periods = np.linspace(min_period, max_period, num=grid_num+1)
+    quality = np.zeros(len(periods))
     for ind, period in enumerate(periods):
-        phase = np.mod(x/period, 1)
-        stds, edges, bin_num = stats.binned_statistic(phase, y, statistic=np.std, bins=100)
-        avg_std[ind] = np.nanmean(stds)
-    order = np.argsort(avg_std)
-    best_periods = periods[order[0:10]]
-    best_period = periods[order[0]]
-    # Apply a median filter
-    yy_smoothed = signal.medfilt(avg_std, 101)
-
-    mp.plot(periods, avg_std, 'ro')
-    mp.plot(periods, yy_smoothed, 'b-')
-    for per in best_periods:
-        mp.axvline(per)
-    mp.show()
-
-#    for plot_num, period in enumerate(best_periods):
-#        period_offset = 0.005
-#        grid_num = 5000
-#        periods = np.linspace(period-period_offset/2, period+period_offset/2, num=grid_num+1)
-#        avg_std = np.zeros(len(periods))
+        phase = np.mod((x - x[0])/period, 1)
+        order = np.argsort(phase)
+        phase = phase[order]
+        mag = y[order]
+        err = er[order]
+        mag = np.append(mag, mag[0])
+        phase = np.append(phase, phase[0])
+        err = np.append(err, err[0])
+        N = len(x)
+        weight = np.zeros(N)
+        s = np.zeros(N)
+        for obs in range(N):
+            weight[obs] = 1/(err[obs]**2+err[obs+1]**2)*(1/(phase[obs+1]-phase[obs]+1/N))
+            s[obs] = weight[obs]*abs(mag[obs] - mag[obs+1])
+        quality[ind] = np.sum(s)/np.sum(weight)
+    order = np.argsort(quality)
+    minimums = periods[order[0:19]]
+    mp.plot(periods[quality < 0.1], quality[quality < 0.1], 'ro')
+    print minimums
+    search_range = search_range/10
+    plot_num = 1
+    for minimum in minimums:
+        mp.axvline(minimum)
+    return minimums
+#        min_period = minimum - search_range/2
+#        max_period = minimum + search_range/2
+#        periods = np.linspace(min_period, max_period, num=grid_num+1)
+#        quality = np.zeros(len(periods))
 #        for ind, period in enumerate(periods):
-#            phase = np.mod(x/period, 1)
-#            stds, edges, bin_num = stats.binned_statistic(phase, y, statistic=np.std, bins=100)
-#            avg_std[ind] = np.nanmean(stds)
-#        order = np.argsort(avg_std)
-#        best_period = periods[order[0]]
-#        mp.plot(periods, avg_std, 'ro')
-#        mp.axvline(best_period)
-#        mp.show()
-#    if plot_save == 1:
-#        mp.savefig('lcvs/'+name+'-period.pdf')
-#    if plot_save == 0:
-#        mp.show()
-    mp.close()
+#            phase = np.mod((x - x[0])/period, 1)
+#            order = np.argsort(phase)
+#            phase = phase[order]
+#            mag = y[order]
+#            err = er[order]
+#            mag = np.append(mag, mag[0])
+#            phase = np.append(phase, phase[0])
+#            err = np.append(err, err[0])
+#            N = len(x)
+#            weight = np.zeros(N)
+#            s = np.zeros(N)
+#            for obs in range(N):
+#                weight[obs] = 1/(err[obs]**2+err[obs+1]**2)*(1/(phase[obs+1]-phase[obs]+1/N))
+#                s[obs] = weight[obs]*abs(mag[obs] - mag[obs+1])
+#            quality[ind] = np.sum(s)/np.sum(weight)
+#        order = np.argsort(quality)
+#        best_period = periods[quality == np.min(quality)]
+#        axs[plot_num].plot(periods, quality, 'ro')
+#        axs[plot_num].axvline(best_period)
+#        plot_num += 1
 
-    return best_period
+#        print 'Best period = ', best_period
+#    return best_period

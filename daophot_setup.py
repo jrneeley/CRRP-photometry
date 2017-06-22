@@ -26,19 +26,37 @@ def spitzer_flux2dn(image, newname=""):
 	scidata *= exptime/fluxconv
 
 
-def set_opt_files(channel):
-	if (channel == 'I1'):
-		optfile = 'ch1.opt'
-	if (channel == 'I2'):
-		optfile = 'ch2.opt'
-	shutil.copy(optfile, 'daophot.opt')
+def set_opt_files(channel, exptime, warm=1):
 
-def set_opt_files_mosaic(channel):
+	opt_dir = '/Users/jrneeley/CRRP/OPTfiles/'
+	opt_folder = '/Users/jrneeley/CRRP/OPTfiles/warm/'
+	if warm == 0:
+		opt_folder = '/Users/jrneeley/CRRP/OPTfiles/cryo/'
+
 	if (channel == 'I1'):
-		optfile = 'ch1-mosaic.opt'
+		optfile = opt_folder+'ch1-'+str(exptime)+'s.opt'
 	if (channel == 'I2'):
-		optfile = 'ch2-mosaic.opt'
+		optfile = opt_folder+'ch2-'+str(exptime)+'s.opt'
 	shutil.copy(optfile, 'daophot.opt')
+	shutil.copy(opt_dir+'photo.opt', 'photo.opt')
+	shutil.copy(opt_dir+'allstar.opt', 'allstar.opt')
+	shutil.copy(opt_dir+'allframe.opt', 'allframe.opt')
+
+def set_opt_files_mosaic(channel, exptime, warm=1):
+
+	opt_dir = '/Users/jrneeley/CRRP/OPTfiles/'
+	opt_folder = '/Users/jrneeley/CRRP/OPTfiles/warm/'
+	if warm == 0:
+		opt_folder = '/Users/jrneeley/CRRP/OPTfiles/cryo/'
+
+	if (channel == 'I1'):
+		optfile = opt_folder+'ch1-'+str(exptime)+'s-mosaic.opt'
+	if (channel == 'I2'):
+		optfile = opt_folder+'ch2-'+str(exptime)+'s-mosaic.opt'
+	shutil.copy(optfile, 'daophot.opt')
+	shutil.copy(opt_dir+'photo.opt', 'photo.opt')
+	shutil.copy(opt_dir+'allstar-mosaic.opt', 'allstar.opt')
+	shutil.copy(opt_dir+'allframe.opt', 'allframe.opt')
 
 def find_fields(image_list, channel):
 	off_list = []

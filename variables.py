@@ -93,13 +93,13 @@ def find_variables_by_coord_mosaic(optical_folder, target):
         dist = np.degrees(dist)*3600.
 
         matches = ids[dist < 3]
-        code = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+        code = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l']
         print 'V'+data['id'][obj]+' - '+str(len(matches))+' matches'
         for ind, star in enumerate(matches):
             if ind == 0:
                 variable_star = 'V'+data['id'][obj]
                 lightcurves.make_mosaic_lcv(['I1'], [variable_star], [star])
-            if ind <= 8 and ind > 0:
+            if ind <= 12 and ind > 0:
                 variable_star = 'V'+data['id'][obj]+code[ind-1]
                 lightcurves.make_mosaic_lcv(['I1'], [variable_star], [star])
         #    lightcurves.phase_lcv('lcvs/'+variable_star+'.lcv', data['period'][obj], 50000, bin=0)

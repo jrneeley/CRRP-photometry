@@ -15,6 +15,7 @@ import numpy as np
 
 target_name = sys.argv[1]
 channel = sys.argv[2]
+exptime = sys.argv[3]
 
 file_list = glob.glob('all/'+channel+'*[0-9].fits')
 dn_list = glob.glob('all/'+channel+'*_dn.fits')
@@ -23,9 +24,8 @@ dn_list = glob.glob('all/'+channel+'*_dn.fits')
 dao_folder = '/Users/jrneeley/Daophot/'
 optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
 
-# Set daophot.opt file to appropriate channel
-daophot_setup.set_opt_files(channel)
-
+# Copy appropriate opt files to current directory
+daophot_setup.set_opt_files(channel, exptime)
 
 # Convert images to counts
 if (len(dn_list) == 0):
@@ -99,7 +99,7 @@ if (start <= 4):
 ## Find appropriate window in source catalog
 if (start <=5):
 
-	ids, xcat, ycat, ra, dec = optical.read_optical_catalog(optical_folder, target_name)
+	ids, xcat, ycat, ra, dec = optical.read_optical_fnl(optical_folder, target_name)
 
 	xmin = np.zeros(num_fields)
 	xmax = np.zeros(num_fields)
