@@ -102,17 +102,27 @@ def hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s):
 
 def radec_string2deg(ra, dec):
 
-    ra_new = np.zeros(len(ra))
-    dec_new = np.zeros(len(dec))
-    for ind, star in enumerate(ra):
+    if type(ra) != np.ndarray:
 
-        ra_sep = ra[ind].split(':')
-        dec_sep = dec[ind].split(':')
-
-        ra_deg, dec_deg = hms2deg(float(ra_sep[0]), float(ra_sep[1]),
+        ra_sep = ra.split(':')
+        dec_sep = dec.split(':')
+        ra_new, dec_new = hms2deg(float(ra_sep[0]), float(ra_sep[1]),
             float(ra_sep[2]), float(dec_sep[0]), float(dec_sep[1]), float(dec_sep[2]))
-        ra_new[ind] = ra_deg
-        dec_new[ind] = dec_deg
+    else:
+        num_stars = len(ra)
+
+        ra_new = np.zeros(num_stars)
+        dec_new = np.zeros(num_stars)
+        for ind, star in enumerate(ra):
+
+            ra_sep = ra[ind].split(':')
+            dec_sep = dec[ind].split(':')
+            print ra_sep, dec_sep
+            ra_deg, dec_deg = hms2deg(float(ra_sep[0]), float(ra_sep[1]),
+                float(ra_sep[2]), float(dec_sep[0]), float(dec_sep[1]), float(dec_sep[2]))
+            ra_new[ind] = ra_deg
+            dec_new[ind] = dec_deg
+
     return ra_new, dec_new
 
 # Finds radial distance between coordinates in arcsec

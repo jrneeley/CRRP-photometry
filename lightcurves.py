@@ -13,10 +13,12 @@ from matplotlib import gridspec
 
 
 
-def make_lcv(channels, stars, dao_id):
+def make_lcv(channels, stars, dao_ids, folder=''):
 
+    lcv_folder = folder+'lcvs/'
+    img_folder = folder+'all/'
     for channel in channels:
-        alf_list = glob.glob('all/'+channel+'*.alf')
+        alf_list = glob.glob(img_folder+channel+'*.alf')
 
         phot_data = np.zeros(len(dao_ids), dtype=[('filter', 'S2', len(alf_list)),
             ('id', 'S8'), ('aor', int, len(alf_list)), ('mjd', float, len(alf_list)),
@@ -25,7 +27,7 @@ def make_lcv(channels, stars, dao_id):
             ('psf_err', float, len(alf_list))])
 
 
-        phot_data['id'] = dao_id
+        phot_data['id'] = dao_ids
 
         for ind in range(0,len(alf_list)):
 
@@ -38,7 +40,7 @@ def make_lcv(channels, stars, dao_id):
             for ind2 in range(0,len(dao_ids)):
                 alf_match = np.argwhere(alf_id == dao_ids[ind2])
                 trash1, aor_num, frame_num, trash2 = alf_list[ind].split('_')
-                trash1, aor_num, trash2 = alf_list[ind].split('_')
+        #        trash1, aor_num, trash2 = alf_list[ind].split('_')
                 phot_data['aor'][ind2,ind] = int(aor_num)
                 phot_data['f_num'][ind2, ind] = int(frame_num)
                 phot_data['mjd'][ind2,ind] = mjd
@@ -53,8 +55,10 @@ def make_lcv(channels, stars, dao_id):
                     phot_data['y'][ind2,ind] = float('NaN')
                     phot_data['psf_mag'][ind2,ind] = float('NaN')
                     phot_data['psf_err'][ind2,ind] = float('NaN')
-        print 'Writing to file...'
+    #    print 'Writing to file...'
         for ind in range(0,len(dao_ids)):
+            if np.all(np.isnan(phot_data['psf_mag'][ind])):
+                continue
 
             data_save = np.array(zip(phot_data['filter'][ind], phot_data['aor'][ind],
                 phot_data['f_num'][ind], phot_data['mjd'][ind],
@@ -63,9 +67,9 @@ def make_lcv(channels, stars, dao_id):
                 dtype=[('c1', 'S2'), ('c2', int), ('c3', int), ('c4', float),
                 ('c5', float), ('c6', float), ('c7', float), ('c8', float)])
             if channel == channels[0]:
-                f_handle = open('lcvs/'+stars[ind]+'.lcv', 'w')
+                f_handle = open(lcv_folder+stars[ind]+'.lcv', 'w')
             else:
-                f_handle = open('lcvs/'+stars[ind]+'.lcv', 'a')
+                f_handle = open(lcv_folder+stars[ind]+'.lcv', 'a')
             np.savetxt(f_handle, data_save, comments='', fmt='%s %8i %2i %10.4f %7.3f %7.3f %6.3f %6.4f')
             f_handle.close()
 
@@ -200,7 +204,9 @@ def phase_lcv(lcv_file, period, T0, bin=1, save=1, plot=0):
 
             for ind, aor in enumerate(aors):
                 band[ind] = filt
-                num = len(mag_all[~np.isnan(mag_all[aor_all == aor])])
+                this_mag = mag_all[aor_all == aor]
+                num = len(this_mag[~np.isnan(this_mag)])
+                np.isnan(mag_all[aor_all == aor])
                 if (num >= 2):
                     mag[ind] = np.nanmean(mag_all[aor_all == aor])
                     mjd[ind] = np.nanmean(mjd_all[aor_all == aor])
@@ -224,7 +230,7 @@ def phase_lcv(lcv_file, period, T0, bin=1, save=1, plot=0):
 
         phase = np.mod((mjd - T0)/period, 1)
         if save == 1:
-            phased_file = re.sub('.lcv', '.phased', lcv_file)
+            phased_file = re.sub('\.lcv', '.phased', lcv_file)
             if filt == filters[0]:
                 f_handle = open(phased_file, 'w')
             else:
@@ -238,25 +244,32 @@ def phase_lcv(lcv_file, period, T0, bin=1, save=1, plot=0):
             phase = phase[~np.isnan(mag)]
             err = err[~np.isnan(mag)]
             mag = mag[~np.isnan(mag)]
-
-            mp.errorbar(phase, mag, yerr=err, fmt='o')
-            mp.ylim((np.max(mag)+0.2, np.min(mag)-0.2))
+            if filt == 'I1':
+                color='b'
+            if filt == 'I2':
+                color='r'
+            mp.errorbar(phase, mag, yerr=err, fmt='o', color=color)
+            mp.ylim((np.max(mag)+0.3, np.min(mag)-0.8))
             mp.xlabel('Phase')
             mp.ylabel('Mag')
-            plot_file = re.sub('.phased', '_'+filt+'_ph.pdf', phased_file)
+            plot_file = re.sub('.phased','-ph.pdf', phased_file)
             mp.savefig(plot_file)
-            mp.gcf().clear()
+
 
         if plot == 1:
             phase = phase[~np.isnan(mag)]
             err = err[~np.isnan(mag)]
             mag = mag[~np.isnan(mag)]
-
+            if filt == filters[0]:
+                mp.subplot(211)
+            else:
+                mp.subplot(212)
             mp.errorbar(phase, mag, yerr=err, fmt='o')
             mp.ylim((np.max(mag)+0.2, np.min(mag)-0.2))
             mp.xlabel('Phase')
-            mp.ylabel('Mag')
+            mp.ylabel(filt+' Mag')
             mp.show()
+    mp.gcf().clear()
 
 def plot_raw_lcv(lcv_file, dao_id):
 
@@ -544,54 +557,60 @@ def period_search_LS(V, B, initial_guess, name, plot_save=0, error_threshold=0.0
 
     return best_period
 
-def period_search_hybrid(V, initial_guess, name, plot_save=0, error_threshold=0.05):
+def period_search_hybrid(V, initial_guess, name, plot_save=0, error_threshold=0.05, search_window=0.002):
+
+    num_investigate = 3
+    if initial_guess < 0:
+        num_investigate = 5
 
     x = np.array(V[2][V[1] < error_threshold], dtype=float)
     y = np.array(V[0][V[1] < error_threshold], dtype=float)
     er = np.array(V[1][V[1] < error_threshold], dtype=float)
 
-    fig = mp.figure(figsize=(10, 12))
-#    gs = gridspec.GridSpec(4,3)
-#    fig, axs = mp.subplots(4, 1, figsize=(8,10))
+    fig = mp.figure(figsize=(3*num_investigate, 12))
 
     best_period = initial_guess
-    period_range = 0.02
+    period_range = search_window
     if initial_guess == np.nan:
         best_period = 0.5
-        period_range = 0.4
+        period_range = 0.2
 # Do initial Lomb Scargle
     freq_max = 1/(best_period-period_range/2)
     freq_min = 1/(best_period+period_range/2)
     frequency = np.linspace(freq_min, freq_max, 1000)
     power = LombScargle(x, y, er).power(frequency)
     order = np.argsort(power)
-    candidate_periods = 1/frequency[order[-3:]]
+    candidate_periods = 1/frequency[order[-num_investigate:]]
 #    print candidate_periods
-    ax1 = mp.subplot2grid((4,3), (0,0), colspan=3)
+    ax1 = mp.subplot2grid((4,num_investigate), (0,0), colspan=num_investigate)
     ax1.plot(1/frequency, power)
 
-    best_periods = np.zeros(3)
-    best_stds = np.zeros(3)
+#    best_periods = np.zeros(num_investigate)
+    best_periods = np.copy(candidate_periods)
+    best_stds = np.zeros(num_investigate)
     for ind, period in enumerate(candidate_periods):
         ax1.axvline(period, color='r')
-        period_range = 0.02
+        period_range = search_window
+
         for iteration in range(3):
 
             period_range = period_range/10
 
-            freq_max = 1/(period-period_range/2)
-            freq_min = 1/(period+period_range/2)
+            freq_max = 1/(best_periods[ind]-period_range/2)
+            freq_min = 1/(best_periods[ind]+period_range/2)
             frequency = np.linspace(freq_min, freq_max, 1000)
             power = LombScargle(x, y, er).power(frequency)
             order = np.argsort(power)
             best_periods[ind] = 1/frequency[order[-1]]
-            ax = mp.subplot2grid((4,3), (iteration+1, ind))
+            ax = mp.subplot2grid((4,num_investigate), (iteration+1, ind))
             ax.plot(1/frequency, power)
 
     #    print best_period
 
-        search_range = 0.0001
-        grid_num = 10000
+        search_range = search_window/100
+        grid_num = search_range*10**8
+        if grid_num > 100000:
+            grid_num = 100000
         min_period = best_periods[ind] - search_range/2
         max_period = best_periods[ind] + search_range/2
         periods = np.linspace(min_period, max_period, num=grid_num+1)
@@ -599,11 +618,14 @@ def period_search_hybrid(V, initial_guess, name, plot_save=0, error_threshold=0.
         for ind2, trial_period in enumerate(periods):
             phase = np.mod(x/trial_period, 1)
             stds, edges, bin_num = stats.binned_statistic(phase, y, statistic=np.std, bins=100)
-            avg_std[ind2] = np.nanmean(stds)
+            counts, edges, bin_num = stats.binned_statistic(phase, y, statistic='count', bins=100)
+            avg_std[ind2] = np.mean(stds[counts > 3])
+    #        avg_std[ind2] = np.nanmean(stds)
+        #print stds[counts == 0]
         order = np.argsort(avg_std)
         best_periods[ind] = periods[order[0]]
         best_stds[ind] = avg_std[order[0]]
-        ax = mp.subplot2grid((4,3), (3, ind))
+        ax = mp.subplot2grid((4,num_investigate), (3, ind))
         ax.plot(periods, avg_std, 'ro')
         ax.axvline(best_periods[ind])
 #    print best_periods, best_stds
@@ -614,8 +636,12 @@ def period_search_hybrid(V, initial_guess, name, plot_save=0, error_threshold=0.
     if plot_save == 0:
         mp.show()
     mp.close()
-
-    return best_periods[best_stds == np.min(best_stds)]
+#    print best_periods
+#    print best_stds
+    best_period = best_periods[best_stds == np.min(best_stds)]
+    if len(best_period) > 1:
+        best_period = best_period[0]
+    return best_period
 
 
 def period_search_peter(V, initial_guess, name, plot_save=0, error_threshold=0.05):

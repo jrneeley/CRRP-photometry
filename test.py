@@ -18,6 +18,8 @@ target_name = sys.argv[1]
 #channel = sys.argv[2]
 optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
 
+
+## Phase optical light curves 
 dtype1 = np.dtype([('id', 'S10'), ('period', float)])
 data = np.loadtxt('PeterPeriods.txt', dtype=dtype1)
 
