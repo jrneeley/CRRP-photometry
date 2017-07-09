@@ -2,6 +2,8 @@ import numpy as np
 import coordinates
 import optical
 import lightcurves
+from astropy.stats import LombScargle
+import matplotlib.pyplot as mp
 
 # Find variables listed in the Clement Catalog
 def find_variables_by_coord(optical_folder, target):
@@ -107,5 +109,31 @@ def find_variables_by_coord_mosaic(optical_folder, target):
 
 
 
+def candidate_variables(V, name, plot_save=0, error_threshold=0.05, min_period=0.2,
+    max_period=1.0, precision=2, grid_num=1000):
+
+    x = np.array(V[2][V[1] < error_threshold], dtype=float)
+    y = np.array(V[0][V[1] < error_threshold], dtype=float)
+    er = np.array(V[1][V[1] < error_threshold], dtype=float)
+
+    mp.figure(figsize=(8,5))
+
+    freq_max = 1/(min_period)
+    freq_min = 1/(max_period)
+
+    frequency = np.linspace(freq_min, freq_max, grid_num)
+
+    power = LombScargle(x, y, er).power(frequency)
+    order = np.argsort(power)
+    best_periods = 1/frequency[order[-20:]]
+#    print candidate_periods
+    mp.plot(1/frequency, power)
+    round_periods = np.round(best_periods, precision)
+    candidate_periods = np.unique(round_periods)
+    for period in candidate_periods:
+        mp.axvline(period, color='r', alpha = 0.5)
+    mp.show()
+
+    return candidate_periods
 # Calculate the Welch-Stetson variability index
 # def calculate_variability_index():

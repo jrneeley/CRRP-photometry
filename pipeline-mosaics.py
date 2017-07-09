@@ -12,9 +12,11 @@ import daomaster
 import coordinates
 import optical
 import numpy as np
+from astropy.io import fits
 
 target_name = sys.argv[1]
 channel = sys.argv[2]
+exptime = sys.argv[3]
 
 file_list = glob.glob('mosaics/'+channel+'*.fits')
 dn_list = glob.glob('mosaics/'+channel+'*_dn.fits')
@@ -24,7 +26,7 @@ dao_folder = '/Users/jrneeley/Daophot/'
 optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
 
 # Set daophot.opt file to appropriate channel
-daophot_setup.set_opt_files_mosaic(channel)
+daophot_setup.set_opt_files_mosaic(channel, exptime)
 
 # Convert images to counts
 if (len(dn_list) == 0):
@@ -57,6 +59,22 @@ if (start <= 0):
 	print "Initial aperture photometry complete."
 
 if (start <= 1):
+
+	hdulist = fits.open(dn_list[0])
+	data = hdulist[0].data
+	hdulist.close()
+	nx = len(data[0])
+	ny = len(data)
+	newdata = data
+	if channel == 'I1':
+		newdata[:,int(nx/3):] = np.nan
+	if channel == 'I2':
+		newdata[:,0:int(nx*2/3)] = np.nan
+	outfile = channel+'-half-mosaic.fits'
+	hdu = fits.PrimaryHDU(newdata)
+	hdu.writeto(outfile, clobber=True)
+	
+
 ## Find PSF on first frame only (manually)
 #	master_frame = raw_input("Identify master frame: ")
 	ready = raw_input("Generate a PSF and copy to the first file. Type continue when ready: ")

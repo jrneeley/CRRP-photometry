@@ -8,13 +8,13 @@ target = sys.argv[1]
 
 optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
 
-refine = 1
+refine = 0
 # Read in variable names and periods from Clement catalog
 dtype1 = np.dtype([('id', 'S10'), ('period', float)])
 data = np.loadtxt(target+'-clement.txt', dtype=dtype1, usecols=(0,3))
 
 # Identify different datsets for this cluster
-datasets = optical.compile_datasets(optical_folder, target, old=0)
+datasets = optical.compile_datasets(target, old=0)
 
 #refine = ['V9']#, 'V12', 'V18', 'V42', 'V51', 'V52', 'V58', 'V66', 'V67', 'V80']
 if refine == 0:
@@ -29,7 +29,8 @@ if refine == 0:
         else:
             f_handle = open('periods.txt', 'a')
 
-        lcv_file = optical_folder+target+'lcvs/'+target+lcv+'.lcv'
+        lcv_file = 'lcvs/optical/'+target+lcv+'.lcv'
+
         period = data['period'][data['id'] == lcv]
         try:
             U, B, V, R, I = lightcurves.read_optical_lcv(lcv_file, old=0)

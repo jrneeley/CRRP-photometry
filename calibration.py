@@ -10,14 +10,15 @@ import coordinates
 import StringIO
 import glob
 import sys
+import re
 from astropy.stats import sigma_clip
 
 
-def find_stars_in_cat(optical_folder, target, channel):
+def find_stars_in_cat(optical_folder, target, channel, folder=''):
 
-    cat_ids, x, y, ra, dec = optical.read_optical_catalog(optical_folder, target)
+    cat_ids, x, y, ra, dec = optical.read_optical_fnl(optical_folder, target)
 
-    reg_file = open(channel+'.reg').read().replace(':', ' ')
+    reg_file = open(folder+channel+'.reg').read().replace(':', ' ')
     dtype1 = np.dtype([('ra_h', int), ('ra_m', int), ('ra_s', float),
         ('dec_d', int), ('dec_m', int), ('dec_s', float)])
     data = np.loadtxt(StringIO.StringIO(reg_file), dtype=dtype1)
@@ -30,7 +31,7 @@ def find_stars_in_cat(optical_folder, target, channel):
 
     cal_ra, cal_dec = coordinates.hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s)
 
-    alf_list = glob.glob('all/'+channel+'*.alf')
+    alf_list = glob.glob(folder+'all/'+channel+'*.alf')
 
     phot_data = np.zeros(len(cal_ra), dtype=[('id', 'S8'), ('ra', float), ('dec', float),
         ('neigh', int), ('aor', int, len(alf_list)), ('f_num', int, len(alf_list)),
@@ -65,8 +66,8 @@ def find_stars_in_cat(optical_folder, target, channel):
             phot_data['f_num'][ind2, ind] = int(frame_num)
 
             if len(alf_match):
-                phot_data['x'][ind2,ind] = x[alf_match]
-                phot_data['y'][ind2,ind] = y[alf_match]
+                phot_data['x'][ind2, ind] = x[alf_match]
+                phot_data['y'][ind2, ind] = y[alf_match]
                 phot_data['psf_mag'][ind2, ind] = alf_mag[alf_match]
                 phot_data['psf_err'][ind2, ind] = alf_err[alf_match]
             else:
@@ -78,20 +79,23 @@ def find_stars_in_cat(optical_folder, target, channel):
     print 'Writing files...'
 #    print phot_data['x'][1]
     for ind in range(0,len(cal_ra)):
+        if np.all(np.isnan(phot_data['psf_mag'][ind])):
+            continue
 
-        np.savetxt('cal_stars/'+channel+'_'+phot_data['id'][ind]+'.coo',
+        np.savetxt(folder+'cal_stars/'+channel+'_'+phot_data['id'][ind]+'.coo',
             np.c_[phot_data['aor'][ind], phot_data['f_num'][ind],
-            phot_data['x'][ind],phot_data['y'][ind], phot_data['psf_mag'][ind],
+            phot_data['x'][ind],phot_data['y'][ind],
+            phot_data['psf_mag'][ind],
             phot_data['psf_err'][ind]],
-            header=str(phot_data['id'][ind])+' '+str(phot_data['ra'][ind])+' '+str(phot_data['dec'][ind])+' '+str(phot_data['neigh'][ind]),
+            header=str(phot_data['id'][ind])+' '+str(phot_data['ra'][ind])+' '+str(phot_data['dec'][ind])+' '+str(phot_data['neigh'][ind])+'\n',
             comments='', fmt='%8i %2i %7.3f %7.3f %6.3f %6.4f')
 
 
 
 
-def find_zp(channel, verbose=0):
+def find_zp(channel, verbose=0, folder=''):
 
-    phot_list = glob.glob('cal_stars/'+channel+'*.phot')
+    phot_list = glob.glob(folder+'cal_stars/'+channel+'*.phot')
 
     n_stars = len(phot_list)
     zp = np.zeros(n_stars)
@@ -177,7 +181,7 @@ def find_zp(channel, verbose=0):
     mp.errorbar(avg_mag, zp, yerr=zp_er, fmt='o', color='r')
     mp.xlabel('Aperture mag')
     mp.ylabel('Aperture - PSF mag')
-    mp.savefig('raw_zp.eps', format='eps')
+    mp.savefig(folder+channel+'-raw-zp.eps', format='eps')
 #    mp.show()
     mp.gcf().clear()
 
@@ -188,7 +192,7 @@ def find_zp(channel, verbose=0):
     ax[1].plot(zp_er, zp, 'ro')
     ax[1].set_xlabel('ZP error')
     ax[1].set_ylabel('ZP')
-    mp.savefig('quality-check.eps', format='eps')
+    mp.savefig(folder+channel+'-quality-check.eps', format='eps')
     mp.show()
     mp.gcf().clear()
 #    mp.show()
@@ -215,13 +219,13 @@ def find_zp(channel, verbose=0):
     #mp.plot(avg_mag, zp, 'ro', good_avg_mag, good_zp, 'bo')
     mp.errorbar(avg_mag, zp, yerr=zp_er, fmt='o', color='r')
     mp.errorbar(good_avg_mag, good_zp, yerr=good_zp_er, fmt='o', color='b')
-    linex = [12,17]
-    liney = [np.nanmean(good_zp), np.nanmean(good_zp)]
-    mp.plot(linex, liney, 'k-')
+    mp.axhline(np.nanmean(good_zp))
+#    liney = [np.nanmean(good_zp), np.nanmean(good_zp)]
+#    mp.plot(linex, liney, 'k-')
     mp.ylabel('Aperture - PSF')
     mp.xlabel('Aperture mag')
 #    mp.show()
-    mp.savefig('Final-zp.eps', format='eps')
+    mp.savefig(folder+channel+'-final-zp.eps', format='eps')
     mp.gcf().clear()
 #    mp.plot(avg_mag, zp_er, 'ro', good_avg_mag, good_zp_er, 'bo')
 #    mp.show()
@@ -254,3 +258,33 @@ def find_zp_single_frame(infile):
     print np.nanmean(zp), np.nanstd(zp)
     mp.plot(data['ap_mag'], zp, 'ro')
     mp.show()
+
+def apply_calibration(channel, zp, folder=''):
+
+    alf_list = glob.glob(folder+'all/'+channel+'*.alf')
+
+    for alf in alf_list:
+
+        new_file = re.sub('.alf', '.cal', alf)
+        f = open(alf, 'r')
+        header1 = f.readline()
+        header2 = f.readline()
+        header3 = f.readline()
+        f.close()
+
+
+        dtype1 = np.dtype([('c1',int), ('c2', float), ('c3', float), ('c4', float),
+            ('c5', float), ('c6', float), ('c7', 'S4'), ('c8', float), ('c9', float)])
+        data = np.loadtxt(alf, dtype=dtype1, skiprows=3)
+
+        data['c4'] = data['c4'] + zp
+
+        f = open(new_file, 'w')
+        f.write(header1)
+        f.write(header2)
+        f.write(header3)
+        f.close()
+
+        f = open(new_file, 'a')
+        np.savetxt(f, data, fmt='%7i %8.3f %8.3f %8.3f %8.4f %8.2f %8s %8.2f %8.3f')
+        f.close()

@@ -61,6 +61,31 @@ def read_optical_fnl(optical_folder, target):
     print "Finished reading optical catalog."
     return(id_num, x, y, ra, dec)
 
+def read_fnl_for_cmd(optical_folder, target, center_ra, center_dec):
+
+    catalog=optical_folder+target+'.fnl'
+
+    print "Reading optical catalog for "+target+"..."
+
+    dtype1 = np.dtype([('id', int), ('V', float), ('B', float), ('I', float),
+        ('R', float), ('U', float), ('ra_h', int), ('ra_m', int), ('ra_s', float),
+        ('dec_d', int), ('dec_m', int), ('dec_s', float)])
+    data = np.loadtxt(catalog, dtype=dtype1, skiprows=3, usecols=[0,3,5,7,9,11,25,26,27,28,29,30])
+
+    ra_h = data['ra_h']
+    ra_m = data['ra_m']
+    ra_s = data['ra_s']
+    dec_d = data['dec_d']
+    dec_m = data['dec_m']
+    dec_s = data['dec_s']
+
+    ra, dec = coordinates.hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s)
+
+    dist = coordinates.radial_dist(ra, dec, center_ra, center_dec)
+
+    print "Finished reading optical catalog."
+    return(data, dist)
+
 def find_variables_fnl(optical_folder, target):
 
     catalog=optical_folder+target+'.fnl'
@@ -110,11 +135,13 @@ def read_optical_catalog_old(target):
     print "Finished reading optical catalog."
     return(id_num, x, y, v_mags, ra, dec)
 
-def compile_datasets(optical_folder, target, old=0):
+def compile_datasets(target, old=0, folder=''):
 
-    lcvs = glob.glob(optical_folder+target+'lcvs/*.lcv')
-    all_datasets = np.zeros(1, dtype='S30')
+    lcvs = glob.glob(folder+'lcvs/optical/*.lcv')
+#    all_datasets = np.zeros(1, dtype='S30')
+#    all_jds = np.zeros(1, dtype=float)
     for lcv in lcvs:
+
         U, B, V, R, I = lightcurves.read_optical_lcv(lcv, old=old)
         if lcv == lcvs[0]:
             all_datasets = np.array(U[3], dtype='S30')
@@ -130,6 +157,7 @@ def compile_datasets(optical_folder, target, old=0):
         all_jds = np.append(all_jds, V[2])
         all_jds = np.append(all_jds, R[2])
         all_jds = np.append(all_jds, I[2])
+    all_jds = all_jds + 2400000.5
     datasets_prefix = np.zeros(len(all_datasets), dtype='S30')
     for ind, string in enumerate(all_datasets):
         datasets_prefix[ind] = string.split(':')[0]

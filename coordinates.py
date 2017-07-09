@@ -126,12 +126,14 @@ def radec_string2deg(ra, dec):
     return ra_new, dec_new
 
 # Finds radial distance between coordinates in arcsec
+# second RA/DEC should be a scalar, first can be scalar or array
 def radial_dist(ra1, dec1, ra2, dec2):
 
     ra1 = np.radians(ra1)
     dec1 = np.radians(dec1)
     ra2 = np.radians(ra2)
     dec2 = np.radians(dec2)
+
 
     x1 = np.cos(dec1)*np.cos(ra1)
     y1 = np.cos(dec1)*np.sin(ra1)

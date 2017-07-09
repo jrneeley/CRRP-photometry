@@ -8,11 +8,11 @@ import variables
 
 target = sys.argv[1]
 
-#dtype1 = np.dtype([('stars', 'S3'), ('dao_ids', 'i8')])
-#data = np.loadtxt('PeterIDs.txt', dtype=dtype1)
+dtype1 = np.dtype([('stars', 'S3'), ('dao_ids', 'i8')])
+data = np.loadtxt('PeterIDs.txt', dtype=dtype1)
 
-#lightcurves.make_lcv(['I1'], data['stars'], data['dao_ids'])
-
+lightcurves.make_lcv(['I1', 'I2'], data['stars'], data['dao_ids'])
+sys.exit()
 #lcv_list = glob.glob('lcvs/*.phased')
 
 #for lcv in lcv_list:
