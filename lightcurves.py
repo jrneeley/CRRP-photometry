@@ -13,6 +13,7 @@ from matplotlib import gridspec
 import os.path
 
 
+
 def make_lcv(channels, stars, dao_ids, folder=''):
 
     lcv_folder = folder+'lcvs/mir/'
@@ -299,6 +300,7 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
             mjd_all = data['mjd'][data['filter'] == filt]
             aor_all = data['aor'][data['filter'] == filt]
 
+
             if (bin_mir == 1):
                 aors = np.unique(aor_all)
                 num_aors = len(aors)
@@ -306,6 +308,7 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
                 err = np.zeros(num_aors)
                 mjd = np.zeros(num_aors)
                 band = np.zeros(num_aors, dtype='S2')
+                source = aors
 
                 for ind, aor in enumerate(aors):
                     band[ind] = filt
@@ -331,6 +334,7 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
                 mag = mag_all
                 err = err_all
                 mjd = mjd_all
+                source = aor_all
                 band = np.repeat(filt, len(mag))
 
             phase = np.mod((mjd - T0)/period, 1)
@@ -339,6 +343,7 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
             phase = phase[~np.isnan(mag)]
             err = err[~np.isnan(mag)]
             mjd = mjd[~np.isnan(mag)]
+            source = source[~np.isnan(mag)]
             mag = mag[~np.isnan(mag)]
             ## Add to data to plot
             if filt == 'I1':
@@ -494,7 +499,9 @@ def plot_raw_optical_lcv(U):#, B, V, R, I):
     mp.ylim(np.max(mags_all)+0.1, np.min(mags_all)-0.1)
     mp.show()
 
-def plot_phased_optical_lcv(U, B, V, R, I, period, name, datasets, plot_save=0, folder=''):
+def plot_phased_optical_lcv(U, B, V, R, I, period, name, datasets, plot_save=0,
+    folder='', error_threshold=0):
+
 
     fig, axs = mp.subplots(5, 1, figsize=(10,13), sharex=True)
     filters = ['U', 'B', 'V', 'R', 'I']
@@ -526,6 +533,12 @@ def plot_phased_optical_lcv(U, B, V, R, I, period, name, datasets, plot_save=0, 
             mjd = I[2]
             source = I[3]
 
+
+        if error_threshold > 0:
+            mags = mags[errs < error_threshold]
+            mjd = mjd[errs < error_threshold]
+            source = source[errs < error_threshold]
+            errs = errs[errs < error_threshold]
         if len(source) == 0:
             continue
         sources_prefix = np.zeros(len(source), dtype='S30')
@@ -643,6 +656,7 @@ def period_search(V, initial_guess, name, plot_save=0, error_threshold=0.05):
 
     return best_period
 
+# Use to do one round of LombScargle and identify possible periods for RRL star
 def period_search_LS(V, name, min_period = 0.2, max_period=1.0, plot_save=0, error_threshold=0.05):
 
     x1 = np.array(V[2][V[1] < error_threshold], dtype=float)
@@ -666,35 +680,58 @@ def period_search_LS(V, name, min_period = 0.2, max_period=1.0, plot_save=0, err
 
     return candidate_periods
 
-def period_search_hybrid(V, initial_guess, name, plot_save=0, error_threshold=0.05,
-    search_window=0.002, num_investigate=3, precision=10e8, step_size=10):
+
+def period_search_hybrid(V, initial_guess, name, second_band=None,
+    plot_save=0, error_threshold=0.1, search_window=0.002,
+    num_investigate=5, step_size=10):
 
 
     x = np.array(V[2][V[1] < error_threshold], dtype=float)
     y = np.array(V[0][V[1] < error_threshold], dtype=float)
     er = np.array(V[1][V[1] < error_threshold], dtype=float)
+    if second_band is not None:
+        x2 = np.array(second_band[2][second_band[1] < error_threshold], dtype=float)
+        y2 = np.array(second_band[0][second_band[1] < error_threshold], dtype=float)
+        er2 = np.array(second_band[1][second_band[1] < error_threshold], dtype=float)
 
-    fig = mp.figure(figsize=(3*num_investigate, 12))
+    delta_time = np.max(x) - np.min(x)
+    approx_p = np.round(initial_guess, 1)
+    n_cycles = np.floor(delta_time/approx_p)
+    max_precision = n_cycles * approx_p / (n_cycles - 0.01) - approx_p
+    order = np.ceil(np.abs(np.log10(max_precision)))
+    precision = 10**order
+    print 'Max precision = 10^'+str(order)
+
+
 
     best_period = initial_guess
-    period_range = search_window
+    min_period = best_period - search_window/2
+    max_period = best_period + search_window/2
     if initial_guess == np.nan:
         best_period = 0.5
         period_range = 0.2
 # Do initial Lomb Scargle
-    freq_max = 1/(best_period-period_range/2)
-    freq_min = 1/(best_period+period_range/2)
+    freq_max = 1/min_period
+    freq_min = 1/max_period
     frequency = np.linspace(freq_min, freq_max, 1000)
     power = LombScargle(x, y, er).power(frequency)
     order = np.argsort(power)
-    candidate_periods = 1/frequency[order[-num_investigate:]]
-#    print candidate_periods
+    possible_periods = 1/frequency[order[-num_investigate:]]
+#    print possible_periods
+    bins = np.linspace(min_period, max_period, 11)
+#    print bins
+    test = np.digitize(possible_periods, bins)
+#    print bins[test-1]+search_window/20
+    candidate_periods = np.unique(bins[test-1]+search_window/20)
+    num_candidates = len(candidate_periods)
 
-    ax1 = mp.subplot2grid((4,num_investigate), (0,0), colspan=num_investigate)
+
+    fig = mp.figure(figsize=(4*num_candidates, 12))
+    ax1 = mp.subplot2grid((4,num_candidates), (0,0), colspan=num_candidates)
     ax1.plot(1/frequency, power)
 
     best_periods = np.copy(candidate_periods)
-    best_stds = np.zeros(num_investigate)
+    best_stds = np.zeros(num_candidates)
     for ind, period in enumerate(candidate_periods):
         ax1.axvline(period, color='r')
         period_range = search_window
@@ -710,7 +747,7 @@ def period_search_hybrid(V, initial_guess, name, plot_save=0, error_threshold=0.
             order = np.argsort(power)
             best_periods[ind] = 1/frequency[order[-1]]
 
-            ax = mp.subplot2grid((4,num_investigate), (iteration+1, ind))
+            ax = mp.subplot2grid((4,num_candidates), (iteration+1, ind))
             ax.plot(1/frequency, power)
 
     #    print best_period
@@ -728,14 +765,19 @@ def period_search_hybrid(V, initial_guess, name, plot_save=0, error_threshold=0.
             phase = np.mod(x/trial_period, 1)
             stds, edges, bin_num = stats.binned_statistic(phase, y, statistic=np.std, bins=100)
             counts, edges, bin_num = stats.binned_statistic(phase, y, statistic='count', bins=100)
-            avg_std[ind2] = np.mean(stds[counts > 3])
-    #        avg_std[ind2] = np.nanmean(stds)
+            if second_band is not None:
+                phase2 = np.mod(x2/trial_period, 1)
+                stds2, edges2, bin_num2 = stats.binned_statistic(phase2, y2, statistic=np.std, bins=100)
+                counts2, edges2, bin_num2 = stats.binned_statistic(phase2, y2, statistic='count', bins=100)
+                avg_std[ind2] = np.mean(stds2[counts2 > 3]) + np.mean(stds[counts > 3])
+            else:
+                avg_std[ind2] = np.mean(stds[counts > 3])
         #print stds[counts == 0]
         order = np.argsort(avg_std)
         best_periods[ind] = periods[order[0]]
         best_stds[ind] = avg_std[order[0]]
 
-        ax = mp.subplot2grid((4,num_investigate), (3, ind))
+        ax = mp.subplot2grid((4,num_candidates), (3, ind))
         ax.plot(periods, avg_std, 'ro')
         ax.axvline(best_periods[ind])
 
@@ -744,15 +786,17 @@ def period_search_hybrid(V, initial_guess, name, plot_save=0, error_threshold=0.
     if plot_save == 0:
         mp.show()
     mp.close()
-#    print best_periods
+    print best_periods
 #    print best_stds
     best_period = best_periods[best_stds == np.min(best_stds)]
     if len(best_period) > 1:
         best_period = best_period[0]
     return best_period
 
+def gloess(phased_lcv_file, clean=0, smoothing_params=None, plot_save=0, folder=''):
 
-def gloess(phased_lcv_file, clean=0, sigma=0.15):
+    figtosave = mp.figure(figsize=(8,10))
+    ax = figtosave.add_subplot(111)
 
     dtype1 = np.dtype([('filter', 'S2'), ('mjd', float), ('phase', float), ('mag', float), ('err', float)])
     data = np.loadtxt(phased_lcv_file, dtype=dtype1, usecols=(0,1,2,3,4))
@@ -760,7 +804,18 @@ def gloess(phased_lcv_file, clean=0, sigma=0.15):
     filters = np.unique(data['filter'])
     num_filters = len(filters)
 
-    for filt in filters:
+    if smoothing_params is None:
+        smoothing_params = np.repeat(1.0, num_filters)
+
+    master_avg_mag = np.zeros(num_filters)
+    master_amp = np.zeros(num_filters)
+    master_sigma = np.zeros(num_filters)
+
+    for filt_num, filt in enumerate(filters):
+
+        sigma = smoothing_params[filt_num]
+        if sigma == 1.0:
+            sigma = 0.1
 
         phase = data['phase'][data['filter'] == filt]
         mag = data['mag'][data['filter'] == filt]
@@ -784,38 +839,116 @@ def gloess(phased_lcv_file, clean=0, sigma=0.15):
         n_data = len(mag_copy)
         n_fit = len(x)
 
-        smoothed_mag = np.zeros(n_fit)
-        weight = np.zeros(n_data)
+        happy = 'n'
+        while happy == 'n':
+            smoothed_mag = np.zeros(n_fit)
+            weight = np.zeros(n_data)
 
-        for ind, step in enumerate(x):
+            for ind, step in enumerate(x):
 
-            dist = phase_copy - step
-            weight = err_copy * np.exp(dist**2/sigma**2)
+                dist = phase_copy - step
+                weight = err_copy * np.exp(dist**2/sigma**2)
 
-            xphase = phase_copy - step
+                xphase = phase_copy - step
 
-            fit = np.polyfit(phase_copy, mag_copy, 2, w=1/weight)
+                fit = np.polyfit(phase_copy, mag_copy, 2, w=1/weight)
 
-            smoothed_mag[ind] = fit[2] + fit[1]*step + fit[0]*step**2
+                smoothed_mag[ind] = fit[2] + fit[1]*step + fit[0]*step**2
 
-        mp.plot(phase_copy, mag_copy, 'bo')
-        mp.plot(x, smoothed_mag, 'r-')
-        mp.ylim((np.max(mag)+0.2, np.min(mag)-0.2))
-        mp.xlabel('Phase')
-        mp.ylabel(filt+' mag')
-        mp.show()
+            smoothed_mag_copy = np.tile(smoothed_mag, 5)
+            x_copy = np.concatenate((x-2, x-1, x, x+1, x+2))
+
+            figshow = mp.figure(figsize=(8,6))
+            ax2 = figshow.add_subplot(111)
+            ax2.plot(phase_copy, mag_copy, 'bo')
+            ax2.plot(x_copy, smoothed_mag_copy, 'r-')
+            ax2.set_ylim((np.max(mag)+0.2, np.min(mag)-0.2))
+            ax2.set_xlim((-0.2, 1.2))
+            ax2.set_xlabel('Phase')
+            ax2.set_ylabel(filt+' mag')
+            mp.show()
+
+
+            if smoothing_params[filt_num] != 1.0:
+                happy = 'y'
+                continue
+            check = raw_input('Are you happy with this fit? [y/n]: ')
+            if check == 'n':
+                sigma = input('Enter new smoothing parameter: ')
+            if check == 'y':
+                happy = 'y'
+
+
         # Derive light curve parameters
         flux = 99*np.power(10,-smoothed_mag/2.5)
         average_flux = np.mean(flux)
         average_mag = -2.5*np.log10(average_flux/99)
 
         amplitude = np.max(smoothed_mag) - np.min(smoothed_mag)
-        ph_max = step[smoothed_mag == np.min(smoothed_mag)]
-        ph_min = step[smoothed_mag == np.max(smoothed_mag)]
+        ph_max = x[smoothed_mag == np.min(smoothed_mag)]
+        ph_min = x[smoothed_mag == np.max(smoothed_mag)]
 
-    #    order = np.argsort([phase - ph_max])
-    #    times = mjd[order]
-    #    mjd_max = np.min(mjd[phase - ph_max < 0.01])
+        if plot_save == 1:
+
+            if filt == 'U':
+                offset = 0.8
+                marker = 'D'
+                color = 'xkcd:violet'
+            if filt == 'B':
+                offset = 0.4
+                marker = 'v'
+                color = 'xkcd:indigo'
+            if filt == 'V':
+                offset = 0
+                marker = 'x'
+                color = 'b'
+            if filt == 'R':
+                offset = -0.2
+                marker = 'd'
+                color = 'c'
+            if filt == 'I':
+                offset = -0.4
+                marker = 's'
+                color = 'g'
+            if filt == 'J':
+                offset = -0.6
+                marker = 'h'
+                color = 'xkcd:gold'
+            if filt == 'H':
+                offset = -0.8
+                marker = '>'
+                color = 'xkcd:orange'
+            if filt == 'K':
+                offset = -1
+                marker = '^'
+                color = 'r'
+            if filt == 'I1':
+                offset = -1
+                marker = 'o'
+                color = 'xkcd:maroon'
+            if filt == 'I2':
+                offset = -1.6
+                marker = '+'
+                color = 'm'
+            ax.errorbar(phase, mag+offset, yerr=err, fmt=marker, color=color)
+            ax.plot(x_copy, smoothed_mag_copy+offset, 'r-')
 
         print filt, average_mag, amplitude
-    return x, smoothed_mag
+        master_avg_mag[filt_num] = average_mag
+        master_amp[filt_num] = amplitude
+        master_sigma[filt_num] = sigma
+
+    if plot_save == 1:
+
+        ax.set_xlim((-0.2,1.2))
+        ax.set_ylim((18,9))
+        ax.set_xlabel('Phase')
+        ax.set_ylabel('Mag + offset')
+    #    ax.set_title(phased_lcv_file)
+        plot_file = re.sub('\.phased', '-fit.pdf', phased_lcv_file)
+        figtosave.savefig(plot_file)
+
+
+
+
+    return filters, master_avg_mag, master_amp, master_sigma

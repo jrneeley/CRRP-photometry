@@ -34,12 +34,15 @@ if refine == 0:
         period = data['period'][data['id'] == lcv]
         try:
             U, B, V, R, I = lightcurves.read_optical_lcv(lcv_file, old=0)
-            new_period = lightcurves.period_search_hybrid(V, period, lcv, plot_save=1)
+            new_period = lightcurves.period_search_hybrid(V, period, lcv, second_band=B, plot_save=0, search_window=0.006)
             print '%10s %0.4f %0.8f' % (lcv, period, new_period)
             f_handle.write('%10s %0.4f %0.8f\n' % (lcv, data['period'][ind], new_period))
-            lightcurves.plot_phased_optical_lcv(U, B, V, R, I, new_period, lcv, datasets, plot_save=1)
+            lightcurves.plot_phased_optical_lcv(U, B, V, R, I, new_period, lcv, datasets, plot_save=0)
         except:
             print '%10s %0.4f %s' % (lcv, period, 'Not found')
+            new_period = np.nan
+            f_handle.write('%10s %0.4f %0.8f\n' % (lcv, data['period'][ind], new_period))
+
     # Close the periods file
         f_handle.close()
 
@@ -50,13 +53,13 @@ if refine == 1:
 #    refine = ['V109=NV14', 'V116=NV5', 'V12', 'V120=NV7', 'V129',
 #        'V130', 'V141', 'V166=ZK22', 'V167', 'V172=ZK13', 'V174=ZK10', 'V21', 'V39', 'V41',
 #        'V53', 'V59', 'V60', 'V67', 'V69', 'V81', 'ZK34', 'ZK74']
-    refine = ['V67']
+    refine = ['V115=V163', 'V85=V168', 'V95=V170', 'V79=V171', 'V155=V176' ]
     for lcv in refine:
         #f = open('periods.txt', 'w')
         lcv_file = optical_folder+target+'lcvs/'+target+lcv+'.lcv'
         period = data['period'][data['id'] == lcv]
 
         U, B, V, R, I = lightcurves.read_optical_lcv(lcv_file, old=0)
-        new_period = lightcurves.period_search_hybrid(V, period, lcv, plot_save=1, search_window=0.2)
+        new_period = lightcurves.period_search_hybrid(V, period, lcv, plot_save=1)
         print '%10s %0.4f %0.8f' % (lcv, period, new_period)
         lightcurves.plot_phased_optical_lcv(U, B, V, R, I, new_period, lcv, datasets, plot_save=1)
