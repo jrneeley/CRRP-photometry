@@ -134,7 +134,7 @@ def make_mosaic_lcv(channels, stars, dao_ids):
             f_handle.close()
 
 
-def phase_lcv(lcv_file, period, T0, bin=0, save=1, plot=0):
+def phase_lcv(lcv_file, period, T0, bin=0, save=1, plot=0, error_threshold=0.3):
 
     dtype1 = np.dtype([('filter', 'S2'), ('aor', int), ('mjd', float),
         ('mag', float), ('err', float)])
@@ -148,6 +148,17 @@ def phase_lcv(lcv_file, period, T0, bin=0, save=1, plot=0):
         mjd_all = data['mjd'][data['filter'] == filt]
         aor_all = data['aor'][data['filter'] == filt]
 
+        # remove NaNs
+        err_all = err_all[~np.isnan(mag_all)]
+        mjd_all = mjd_all[~np.isnan(mag_all)]
+        aor_all = aor_all[~np.isnan(mag_all)]
+        mag_all = mag_all[~np.isnan(mag_all)]
+
+        # Filter on the uncertainty
+        mag_all = mag_all[err_all < error_threshold]
+        mjd_all = mjd_all[err_all < error_threshold]
+        aor_all = aor_all[err_all < error_threshold]
+        err_all = err_all[err_all < error_threshold]
 
 
         if (bin == 1):
@@ -160,20 +171,25 @@ def phase_lcv(lcv_file, period, T0, bin=0, save=1, plot=0):
 
             for ind, aor in enumerate(aors):
                 band[ind] = filt
-                this_mag = mag_all[aor_all == aor]
-                num = len(this_mag[~np.isnan(this_mag)])
-                np.isnan(mag_all[aor_all == aor])
-                if (num >= 2):
-                    mag[ind] = np.nanmean(mag_all[aor_all == aor])
-                    mjd[ind] = np.nanmean(mjd_all[aor_all == aor])
-                    err[ind] = np.nanstd(mag_all[aor_all== aor])
+                dither_mags = mag_all[aor_all == aor]
+                dither_errs = err_all[aor_all == aor]
+                dither_mjds = mjd_all[aor_all == aor]
+                num = len(dither_mags)
+
+                if (num > 2):
+                    dispersion = np.std(dither_mags)
+                    mean_mag = np.mean(dither_mags)
+                    mag[ind] = np.nanmean(dither_mags[abs(dither_mags - mean_mag) < 2*dispersion])
+                    mjd[ind] = np.nanmean(dither_mjds[abs(dither_mags - mean_mag) < 2*dispersion])
+                    err[ind] = np.nanstd(dither_mags[abs(dither_mags - mean_mag) < 2*dispersion])
+                if (num ==2):
+                    mag[ind] = np.nanmean(dither_mags)
+                    mjd[ind] = np.nanmean(dither_mjds)
+                    err[ind] = np.sqrt(dither_errs[0]**2+dither_errs[1]**2)
                 if (num == 1):
-                    epoch_mag = mag_all[aor_all == aor]
-                    epoch_err = err_all[aor_all == aor]
-                    epoch_mjd = mjd_all[aor_all == aor]
-                    mag[ind] = epoch_mag[~np.isnan(epoch_mag)]
-                    mjd[ind] = epoch_mjd[~np.isnan(epoch_mag)]
-                    err[ind] = epoch_err[~np.isnan(epoch_mag)]
+                    mag[ind] = mag_all[aor_all == aor]
+                    err[ind] = err_all[aor_all == aor]
+                    mjd[ind] = mjd_all[aor_all == aor]
                 if (num == 0):
                     mag[ind] = np.nan
                     mjd[ind] = np.nan
@@ -197,9 +213,9 @@ def phase_lcv(lcv_file, period, T0, bin=0, save=1, plot=0):
             f_handle.close()
 
             # remove any NaN values
-            phase = phase[~np.isnan(mag)]
-            err = err[~np.isnan(mag)]
-            mag = mag[~np.isnan(mag)]
+        #    phase = phase[~np.isnan(mag)]
+        #    err = err[~np.isnan(mag)]
+        #    mag = mag[~np.isnan(mag)]
 
             if filt == 'I1':
                 color='b'
@@ -247,6 +263,7 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
 
         U, B, V, R, I = read_optical_lcv(path_to_optical+target+lcv)
 
+
         Uph = np.mod((U[2]-T0)/period, 1)
         Bph = np.mod((B[2]-T0)/period, 1)
         Vph = np.mod((V[2]-T0)/period, 1)
@@ -288,9 +305,9 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
 
     if mir_lcv == 1:
 
-        dtype1 = np.dtype([('filter', 'S2'), ('aor', int), ('mjd', float),
+        dtype1 = np.dtype([('filter', 'S2'), ('aor', int), ('frame', int), ('mjd', float),
             ('mag', float), ('err', float)])
-        data = np.loadtxt(path_to_mir+lcv, dtype=dtype1, usecols=(0,1,3,6,7))
+        data = np.loadtxt(path_to_mir+lcv, dtype=dtype1, usecols=(0,1,2,3,6,7))
 
         filters = np.unique(data['filter'])
         for filt in filters:
@@ -299,7 +316,21 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
             err_all = data['err'][data['filter'] == filt]
             mjd_all = data['mjd'][data['filter'] == filt]
             aor_all = data['aor'][data['filter'] == filt]
+            frame_all = data['frame'][data['filter'] == filt]
 
+            # remove NaNs
+            err_all = err_all[~np.isnan(mag_all)]
+            mjd_all = mjd_all[~np.isnan(mag_all)]
+            aor_all = aor_all[~np.isnan(mag_all)]
+            frame_all = frame_all[~np.isnan(mag_all)]
+            mag_all = mag_all[~np.isnan(mag_all)]
+            # Filter on the uncertainty
+            error_threshold = 0.5
+            mag_all = mag_all[err_all < error_threshold]
+            mjd_all = mjd_all[err_all < error_threshold]
+            aor_all = aor_all[err_all < error_threshold]
+            frame_all = frame_all[err_all < error_threshold]
+            err_all = err_all[err_all < error_threshold]
 
             if (bin_mir == 1):
                 aors = np.unique(aor_all)
@@ -308,24 +339,32 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
                 err = np.zeros(num_aors)
                 mjd = np.zeros(num_aors)
                 band = np.zeros(num_aors, dtype='S2')
-                source = aors
+                source = np.zeros(num_aors, dtype='S15')
+
 
                 for ind, aor in enumerate(aors):
+
+                    source[ind] = 'r'+str(aor)
                     band[ind] = filt
-                    this_mag = mag_all[aor_all == aor]
-                    num = len(this_mag[~np.isnan(this_mag)])
-                    np.isnan(mag_all[aor_all == aor])
-                    if (num >= 2):
-                        mag[ind] = np.nanmean(mag_all[aor_all == aor])
-                        mjd[ind] = np.nanmean(mjd_all[aor_all == aor])
-                        err[ind] = np.nanstd(mag_all[aor_all== aor])
+                    dither_mags = mag_all[aor_all == aor]
+                    dither_errs = err_all[aor_all == aor]
+                    dither_mjds = mjd_all[aor_all == aor]
+                    num = len(dither_mags)
+
+                    if (num > 2):
+                        dispersion = np.std(dither_mags)
+                        mean_mag = np.mean(dither_mags)
+                        mag[ind] = np.nanmean(dither_mags[abs(dither_mags - mean_mag) < 2*dispersion])
+                        mjd[ind] = np.nanmean(dither_mjds[abs(dither_mags - mean_mag) < 2*dispersion])
+                        err[ind] = np.nanstd(dither_mags[abs(dither_mags - mean_mag) < 2*dispersion])
+                    if (num == 2):
+                        mag[ind] = np.nanmean(dither_mags)
+                        mjd[ind] = np.nanmean(dither_mjds)
+                        err[ind] = np.sqrt(dither_errs[0]**2+dither_errs[1]**2)
                     if (num == 1):
-                        epoch_mag = mag_all[aor_all == aor]
-                        epoch_err = err_all[aor_all == aor]
-                        epoch_mjd = mjd_all[aor_all == aor]
-                        mag[ind] = epoch_mag[~np.isnan(epoch_mag)]
-                        mjd[ind] = epoch_mjd[~np.isnan(epoch_mag)]
-                        err[ind] = epoch_err[~np.isnan(epoch_mag)]
+                        mag[ind] = mag_all[aor_all == aor]
+                        err[ind] = err_all[aor_all == aor]
+                        mjd[ind] = mjd_all[aor_all == aor]
                     if (num == 0):
                         mag[ind] = np.nan
                         mjd[ind] = np.nan
@@ -334,17 +373,12 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
                 mag = mag_all
                 err = err_all
                 mjd = mjd_all
-                source = aor_all
+                source = ['r'+str(aor_all[i])+':'+str(frame_all[i]) for i in range(len(aor_all))]
+
                 band = np.repeat(filt, len(mag))
 
             phase = np.mod((mjd - T0)/period, 1)
-            ## remove NaN values
-            band = band[~np.isnan(mag)]
-            phase = phase[~np.isnan(mag)]
-            err = err[~np.isnan(mag)]
-            mjd = mjd[~np.isnan(mag)]
-            source = source[~np.isnan(mag)]
-            mag = mag[~np.isnan(mag)]
+
             ## Add to data to plot
             if filt == 'I1':
                 offset = -1.0
@@ -352,7 +386,7 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
                 offset = -1.5
             mp.errorbar(phase, mag+offset, yerr=err, fmt='x')
             ## Add data to file
-            data_save = np.array(zip(band, mjd, phase, mag, err, np.repeat('IRAC', len(mjd))),
+            data_save = np.array(zip(band, mjd, phase, mag, err, source),
                 dtype=[('c1', 'S2'), ('c2', float), ('c3', float), ('c4', float),
                 ('c5', float), ('c6', 'S30')])
             np.savetxt(f_handle, data_save, fmt='%2s %10.4f %8.6f %6.3f %5.3f %s')
@@ -798,6 +832,9 @@ def gloess(phased_lcv_file, clean=0, smoothing_params=None, plot_save=0, folder=
     figtosave = mp.figure(figsize=(8,10))
     ax = figtosave.add_subplot(111)
 
+    master_filters = np.array(['U', 'B', 'V', 'R', 'I', 'J', 'H', 'K',
+        'I1', 'I2'], dtype='S2')
+
     dtype1 = np.dtype([('filter', 'S2'), ('mjd', float), ('phase', float), ('mag', float), ('err', float)])
     data = np.loadtxt(phased_lcv_file, dtype=dtype1, usecols=(0,1,2,3,4))
     print phased_lcv_file
@@ -805,15 +842,22 @@ def gloess(phased_lcv_file, clean=0, smoothing_params=None, plot_save=0, folder=
     num_filters = len(filters)
 
     if smoothing_params is None:
-        smoothing_params = np.repeat(1.0, num_filters)
+        smoothing_params = np.repeat(1.0, 10)
 
-    master_avg_mag = np.zeros(num_filters)
-    master_amp = np.zeros(num_filters)
-    master_sigma = np.zeros(num_filters)
+    master_avg_mag = np.zeros(10)
+    master_amp = np.zeros(10)
+    master_sigma = np.zeros(10)
 
-    for filt_num, filt in enumerate(filters):
+    for filt in filters:
 
-        sigma = smoothing_params[filt_num]
+        if filt == 'R' or filt == 'U':
+            master_avg_mag[master_filters == filt] = np.nan
+            master_amp[master_filters == filt] = np.nan
+            master_sigma[master_filters == filt] = np.nan
+            continue
+            
+        sigma = float(smoothing_params[master_filters == filt])
+
         if sigma == 1.0:
             sigma = 0.1
 
@@ -827,8 +871,12 @@ def gloess(phased_lcv_file, clean=0, smoothing_params=None, plot_save=0, folder=
         mag = mag[~np.isnan(mag)]
 
         if clean == 1:
-            # do sigma clipping or remove outliers
+            # remove obvious bad data
             dispersion = np.std(mag)
+            phase = phase[abs(mag - np.mean(mag)) < 2*dispersion]
+            err = err[abs(mag - np.mean(mag)) < 2*dispersion]
+            mag = mag[abs(mag - np.mean(mag)) < 2*dispersion]
+
 
         phase_copy = np.concatenate((phase-2, phase-1, phase, phase+1, phase+2))
         mag_copy = np.tile(mag, 5)
@@ -869,7 +917,7 @@ def gloess(phased_lcv_file, clean=0, smoothing_params=None, plot_save=0, folder=
             mp.show()
 
 
-            if smoothing_params[filt_num] != 1.0:
+            if smoothing_params[master_filters == filt] != 1.0:
                 happy = 'y'
                 continue
             check = raw_input('Are you happy with this fit? [y/n]: ')
@@ -928,15 +976,15 @@ def gloess(phased_lcv_file, clean=0, smoothing_params=None, plot_save=0, folder=
                 color = 'xkcd:maroon'
             if filt == 'I2':
                 offset = -1.6
-                marker = '+'
+                marker = 'p'
                 color = 'm'
             ax.errorbar(phase, mag+offset, yerr=err, fmt=marker, color=color)
             ax.plot(x_copy, smoothed_mag_copy+offset, 'r-')
 
         print filt, average_mag, amplitude
-        master_avg_mag[filt_num] = average_mag
-        master_amp[filt_num] = amplitude
-        master_sigma[filt_num] = sigma
+        master_avg_mag[master_filters == filt] = average_mag
+        master_amp[master_filters == filt] = amplitude
+        master_sigma[master_filters == filt] = sigma
 
     if plot_save == 1:
 
@@ -951,4 +999,4 @@ def gloess(phased_lcv_file, clean=0, smoothing_params=None, plot_save=0, folder=
 
 
 
-    return filters, master_avg_mag, master_amp, master_sigma
+    return master_filters, master_avg_mag, master_amp, master_sigma
