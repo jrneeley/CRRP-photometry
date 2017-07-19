@@ -520,7 +520,11 @@ def read_optical_lcv(lcv_file, old=0):
 
 def plot_raw_optical_lcv(U):#, B, V, R, I):
 
-    mp.errorbar(U[2], U[0], yerr = U[1], fmt='o', color='r')
+    mags = U[0].astype(float)
+    phase = U[2].astype(float)
+    errs = U[1].astype(float)
+
+    mp.errorbar(phase, mags, yerr = errs, fmt='o', color='r')
 #    mp.errorbar(B[2], B[0]-1, yerr = B[1], fmt='o', color='b')
 #    mp.errorbar(V[2], V[0]-2, yerr = V[1], fmt='o', color='k')
 #    mp.errorbar(R[2], R[0]-3, yerr = R[1], fmt='o', color='c')
@@ -529,12 +533,12 @@ def plot_raw_optical_lcv(U):#, B, V, R, I):
 #    mags_all = np.append(mags_all, V[0]-2)
 #    mags_all = np.append(mags_all, R[0]-3)
 #    mags_all = np.append(mags_all, I[0]-5)
-    mags_all = U[0]
-    mp.ylim(np.max(mags_all)+0.1, np.min(mags_all)-0.1)
+
+    mp.ylim(np.nanmax(mags)+0.1, np.nanmin(mags)-0.1)
     mp.show()
 
 def plot_phased_optical_lcv(U, B, V, R, I, period, name, datasets, plot_save=0,
-    folder='', error_threshold=0):
+    folder='', error_threshold=0, colors=None):
 
 
     fig, axs = mp.subplots(5, 1, figsize=(10,13), sharex=True)
@@ -542,29 +546,29 @@ def plot_phased_optical_lcv(U, B, V, R, I, period, name, datasets, plot_save=0,
 
     for num in range(5):
         if num == 0:
-            mags = U[0]
-            errs = U[1]
-            mjd = U[2]
+            mags = U[0].astype(float)
+            errs = U[1].astype(float)
+            mjd = U[2].astype(float)
             source = U[3]
         if num == 1:
-            mags = B[0]
-            errs = B[1]
-            mjd = B[2]
+            mags = B[0].astype(float)
+            errs = B[1].astype(float)
+            mjd = B[2].astype(float)
             source = B[3]
         if num == 2:
-            mags = V[0]
-            errs = V[1]
-            mjd = V[2]
+            mags = V[0].astype(float)
+            errs = V[1].astype(float)
+            mjd = V[2].astype(float)
             source = V[3]
         if num == 3:
-            mags = R[0]
-            errs = R[1]
-            mjd = R[2]
+            mags = R[0].astype(float)
+            errs = R[1].astype(float)
+            mjd = R[2].astype(float)
             source = R[3]
         if num == 4:
-            mags = I[0]
-            errs = I[1]
-            mjd = I[2]
+            mags = I[0].astype(float)
+            errs = I[1].astype(float)
+            mjd = I[2].astype(float)
             source = I[3]
 
 
@@ -589,8 +593,12 @@ def plot_phased_optical_lcv(U, B, V, R, I, period, name, datasets, plot_save=0,
             err = errs[sources_prefix == dataset]
             if len(ph) == 0:
                 continue
-            axs[num].errorbar(ph, mag, yerr=err, fmt='o', color=plotting_utilities.get_color(ind))
-        axs[num].set_ylim(np.max(mags)+0.2, np.min(mags)-0.2)
+            if colors is None:
+                color = plotting_utilities.get_color(ind)
+            else:
+                color = colors[ind]
+            axs[num].errorbar(ph, mag, yerr=err, fmt='o', color=color)
+        axs[num].set_ylim(np.nanmax(mags)+0.2, np.nanmin(mags)-0.2)
         axs[num].set_ylabel(filters[num])
 
     axs[0].set_title(name+' P = {}'.format(period))
@@ -750,14 +758,27 @@ def period_search_hybrid(V, initial_guess, name, second_band=None,
     frequency = np.linspace(freq_min, freq_max, 1000)
     power = LombScargle(x, y, er).power(frequency)
     order = np.argsort(power)
+## new
     possible_periods = 1/frequency[order[-num_investigate:]]
-#    print possible_periods
     bins = np.linspace(min_period, max_period, 11)
-#    print bins
-    test = np.digitize(possible_periods, bins)
-#    print bins[test-1]+search_window/20
-    candidate_periods = np.unique(bins[test-1]+search_window/20)
-    num_candidates = len(candidate_periods)
+    bin_index = np.digitize(possible_periods, bins)
+    bins_with_peaks = np.unique(bin_index)
+    num_candidates = len(bins_with_peaks)
+    candidate_periods = np.zeros(num_candidates)
+    for ind, i in enumerate(bins_with_peaks):
+        if i == len(bins):
+            continue
+        max_f = 1/bins[i-1]
+        min_f = 1/bins[i]
+        power_in_bin = power[(frequency <= max_f) & (frequency >= min_f)]
+        max_power = np.max(power_in_bin)
+        candidate_periods[ind] = 1/frequency[power == max_power]
+## old
+#    possible_periods = 1/frequency[order[-num_investigate:]]
+#    bins = np.linspace(min_period, max_period, 11)
+#    test = np.digitize(possible_periods, bins)
+#    candidate_periods = np.unique(bins[test-1]+search_window/20)
+#    num_candidates = len(candidate_periods)
 
 
     fig = mp.figure(figsize=(4*num_candidates, 12))
@@ -855,7 +876,7 @@ def gloess(phased_lcv_file, clean=0, smoothing_params=None, plot_save=0, folder=
             master_amp[master_filters == filt] = np.nan
             master_sigma[master_filters == filt] = np.nan
             continue
-            
+
         sigma = float(smoothing_params[master_filters == filt])
 
         if sigma == 1.0:

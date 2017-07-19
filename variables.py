@@ -110,7 +110,7 @@ def find_variables_by_coord_mosaic(optical_folder, target):
 
 
 def candidate_variables(V, name, plot_save=0, error_threshold=0.05, min_period=0.2,
-    max_period=1.0, precision=2, grid_num=1000):
+    max_period=1.0, grid_num=1000):
 
     x = np.array(V[2][V[1] < error_threshold], dtype=float)
     y = np.array(V[0][V[1] < error_threshold], dtype=float)
@@ -120,20 +120,49 @@ def candidate_variables(V, name, plot_save=0, error_threshold=0.05, min_period=0
 
     freq_max = 1/(min_period)
     freq_min = 1/(max_period)
+    search_window = max_period - min_period
 
     frequency = np.linspace(freq_min, freq_max, grid_num)
 
     power = LombScargle(x, y, er).power(frequency)
     order = np.argsort(power)
-    best_periods = 1/frequency[order[-20:]]
-#    print candidate_periods
+#    best_periods = 1/frequency[order[-10:]]
+    possible_periods = 1/frequency[order[-10:]]
+    bins = np.linspace(min_period, max_period, 11)
+    bin_index = np.digitize(possible_periods, bins)
+    bins_with_peaks = np.unique(bin_index)
+    num_candidates = len(bins_with_peaks)
+    candidate_periods = np.zeros(num_candidates)
+    for ind, i in enumerate(bins_with_peaks):
+        if i == len(bins):
+            continue
+        max_f = 1/bins[i-1]
+        min_f = 1/bins[i]
+        power_in_bin = power[(frequency <= max_f) & (frequency >= min_f)]
+        max_power = np.max(power_in_bin)
+        candidate_periods[ind] = 1/frequency[power == max_power]
+
+    print candidate_periods
+
     mp.plot(1/frequency, power)
-    round_periods = np.round(best_periods, precision)
-    candidate_periods = np.unique(round_periods)
     for period in candidate_periods:
         mp.axvline(period, color='r', alpha = 0.5)
     mp.show()
 
     return candidate_periods
+
+
 # Calculate the Welch-Stetson variability index
+def welch_stetson_index(band1, band1_errs, band2, band2_errs):
+
+    mean_band1 = sum(band1/band1_errs**2)/sum(1/band1_errs**2)
+    mean_band2 = sum(band2/band2_errs**2)/sum(1/band2_errs**2)
+
+    delta_band1 = (band1 - mean_band1)/band1_errs
+    delta_band2 = (band2 - mean_band2)/band2_errs
+
+    N = len(band1)
+    ws_index = np.sqrt(1/(N*(N-1)))*sum(delta_band1 * delta_band2)
+
+    return ws_index
 # def calculate_variability_index():

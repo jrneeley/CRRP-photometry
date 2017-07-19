@@ -61,16 +61,20 @@ def read_optical_fnl(optical_folder, target):
     print "Finished reading optical catalog."
     return(id_num, x, y, ra, dec)
 
-def read_fnl_for_cmd(optical_folder, target, center_ra, center_dec):
+def read_fnl_w_radial_dist(optical_folder, target, center_ra, center_dec):
 
     catalog=optical_folder+target+'.fnl'
 
     print "Reading optical catalog for "+target+"..."
 
-    dtype1 = np.dtype([('id', int), ('V', float), ('B', float), ('I', float),
-        ('R', float), ('U', float), ('ra_h', int), ('ra_m', int), ('ra_s', float),
-        ('dec_d', int), ('dec_m', int), ('dec_s', float)])
-    data = np.loadtxt(catalog, dtype=dtype1, skiprows=3, usecols=[0,3,5,7,9,11,25,26,27,28,29,30])
+    dtype1 = np.dtype([('id', int), ('x', float), ('y', float), ('V', float),
+        ('Ver', float), ('B', float), ('Ber', float), ('I', float), ('Ier', float),
+        ('R', float), ('Rer', float), ('U', float), ('Uer', float), ('nV', int),
+        ('nB', int), ('nI', int), ('nR', int), ('nU', int), ('chi', float),
+        ('sharp', float), ('var1', float), ('var2', float), ('var3', float),
+        ('var4', float), ('var5', float), ('ra_h', int), ('ra_m', int),
+        ('ra_s', float), ('dec_d', int), ('dec_m', int), ('dec_s', float)])
+    data = np.loadtxt(catalog, dtype=dtype1, skiprows=3, usecols=range(31))
 
     ra_h = data['ra_h']
     ra_m = data['ra_m']
@@ -80,13 +84,30 @@ def read_fnl_for_cmd(optical_folder, target, center_ra, center_dec):
     dec_s = data['dec_s']
 
     ra, dec = coordinates.hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s)
-
     dist = coordinates.radial_dist(ra, dec, center_ra, center_dec)
 
     print "Finished reading optical catalog."
     return(data, dist)
 
-def find_variables_fnl(optical_folder, target):
+def read_fnl(optical_folder, target):
+
+    catalog=optical_folder+target+'.fnl'
+
+    print "Reading optical catalog for "+target+"..."
+
+    dtype1 = np.dtype([('id', int), ('x', float), ('y', float), ('V', float),
+        ('Ver', float), ('B', float), ('Ber', float), ('I', float), ('Ier', float),
+        ('R', float), ('Rer', float), ('U', float), ('Uer', float), ('nV', int),
+        ('nB', int), ('nI', int), ('nR', int), ('nU', int), ('chi', float),
+        ('sharp', float), ('var1', float), ('var2', float), ('var3', float),
+        ('var4', float), ('var5', float), ('ra_h', int), ('ra_m', int),
+        ('ra_s', float), ('dec_d', int), ('dec_m', int), ('dec_s', float)])
+    data = np.loadtxt(catalog, dtype=dtype1, skiprows=3, usecols=range(31))
+
+    print "Finished reading optical catalog."
+    return data
+
+def find_variables_fnl(optical_folder, target, center_ra, center_dec, folder=''):
 
     catalog=optical_folder+target+'.fnl'
 
@@ -100,11 +121,48 @@ def find_variables_fnl(optical_folder, target):
     for line in lines:
         temp = line.split()
         if len(temp) == 32:
-            master_id.append(temp[0])
+            master_id.append(int(temp[0]))
             variable_id.append(temp[-1])
 
-    data_save = np.array(zip(variable_id, master_id), dtype=[('c1', 'S10'), ('c2', int)])
-    np.savetxt('PeterIDs.txt', data_save, comments='', fmt='%10s %8i')
+    data, dist = read_fnl_w_radial_dist(optical_folder, target, center_ra, center_dec)
+    mags = np.zeros(len(master_id))
+    errs = np.zeros(len(master_id))
+    rad_dist = np.zeros(len(master_id))
+    var1 = np.zeros(len(master_id))
+    var2 = np.zeros(len(master_id))
+    var3 = np.zeros(len(master_id))
+    var4 = np.zeros(len(master_id))
+    var5 = np.zeros(len(master_id))
+    ra = np.zeros(len(master_id), dtype='S13')
+    dec = np.zeros(len(master_id), dtype='S13')
+    for ind, star in enumerate(master_id):
+
+        mags[ind] = data['V'][data['id'] == star]
+        errs[ind] = data['Ver'][data['id'] == star]
+        rad_dist[ind] = dist[data['id'] == star]
+        var1[ind] = data['var1'][data['id'] == star]
+        var2[ind] = data['var2'][data['id'] == star]
+        var3[ind] = data['var3'][data['id'] == star]
+        var4[ind] = data['var4'][data['id'] == star]
+        var5[ind] = data['var5'][data['id'] == star]
+        ra_h = data['ra_h'][data['id'] == star]
+        ra_m = data['ra_m'][data['id'] == star]
+        ra_s = data['ra_s'][data['id'] == star]
+        dec_d = data['dec_d'][data['id'] == star]
+        dec_m = data['dec_m'][data['id'] == star]
+        dec_s = data['dec_s'][data['id'] == star]
+    #    ra_d, dec_de = coordinates.hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s)
+    #    ra_deg[ind] = ra_d[0]
+    #    dec_deg[ind] = dec_de[0]
+        ra[ind] = str(ra_h[0])+':'+str(ra_m[0])+':'+str(ra_s[0])
+        dec[ind] = str(dec_d[0])+':'+str(dec_m[0])+':'+str(dec_s[0])
+    data_save = np.array(zip(variable_id, master_id, mags, errs, var1, var2, var3,
+        var4, var5, ra, dec, rad_dist),
+        dtype=[('c1', 'S10'), ('c2', int), ('c3', float), ('c4', float), ('c5', float),
+        ('c6', float), ('c7', float), ('c8', float), ('c9', float), ('c10', 'S13'),
+        ('c11', 'S13'), ('c12', float)])
+    np.savetxt(folder+'PeterIDs.txt', data_save, comments='',
+        fmt='%10s %8i %7.3f %6.3f %7.3f %7.3f %7.3f %6.1f %7.4f %13s %13s %10.3f')
 
 
 
@@ -135,7 +193,7 @@ def read_optical_catalog_old(target):
     print "Finished reading optical catalog."
     return(id_num, x, y, v_mags, ra, dec)
 
-def compile_datasets(target, old=0, folder=''):
+def compile_datasets(target, old=0, folder='', returnColors=True):
 
     lcvs = glob.glob(folder+'lcvs/optical/*.lcv')
 #    all_datasets = np.zeros(1, dtype='S30')
@@ -165,6 +223,7 @@ def compile_datasets(target, old=0, folder=''):
 
     dataset_names = unique[np.argsort(counts)[::-1]]
     dataset_counts = counts[np.argsort(counts)[::-1]]
+    colors = np.zeros(len(dataset_names), dtype='S25')
     print '\n\nDatasets:\n'
     for ind, dataset in enumerate(dataset_names):
         jds = all_jds[datasets_prefix == dataset]
@@ -172,6 +231,10 @@ def compile_datasets(target, old=0, folder=''):
         t_max = Time(jds.max(), format='jd')
         t_min.out_subfmt = 'date'
         t_max.out_subfmt = 'date'
+        colors[ind] = plotting_utilities.get_color(ind)
         print '%10s %6i %s %s %s' % (dataset, dataset_counts[ind], t_min.iso, t_max.iso, plotting_utilities.get_color(ind))
 
-    return unique[np.argsort(counts)[::-1]]
+    if returnColors == True:
+        return dataset_names, colors
+    if returnColors == False:
+        return dataset_names
