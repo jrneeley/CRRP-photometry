@@ -3,18 +3,23 @@ import numpy as np
 import optical
 import lightcurves
 import sys
+import os
 
 target = sys.argv[1]
 
-optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
+parent_dir = os.getcwd()
+
+#optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
+optical_dir = parent_dir+'/OpticalCatalogs/'
+target_dir = parent_dir+'/'+target+'/'
 
 refine = 0
 # Read in variable names and periods from Clement catalog
 dtype1 = np.dtype([('id', 'S10'), ('period', float)])
-data = np.loadtxt(target+'-clement.txt', dtype=dtype1, usecols=(0,3))
+data = np.loadtxt(target_dir+target+'-clement.txt', dtype=dtype1, usecols=(0,3))
 
 # Identify different datsets for this cluster
-datasets = optical.compile_datasets(target, old=0)
+datasets, colors = optical.compile_datasets(target_dir, old=0)
 
 #refine = ['V9']#, 'V12', 'V18', 'V42', 'V51', 'V52', 'V58', 'V66', 'V67', 'V80']
 if refine == 0:
@@ -25,19 +30,19 @@ if refine == 0:
 
     # Open file to save periods
         if ind == 0:
-            f_handle = open('periods.txt', 'w')
+            f_handle = open(target_dir+'periods.txt', 'w')
         else:
-            f_handle = open('periods.txt', 'a')
+            f_handle = open(target_dir+'periods.txt', 'a')
 
-        lcv_file = 'lcvs/optical/'+target+lcv+'.lcv'
+        lcv_file = target_dir+'lcvs/optical/'+target+lcv+'.lcv'
 
         period = data['period'][data['id'] == lcv]
         try:
             U, B, V, R, I = lightcurves.read_optical_lcv(lcv_file, old=0)
-            new_period = lightcurves.period_search_hybrid(V, period, lcv, second_band=B, plot_save=0, search_window=0.006)
+            new_period = lightcurves.period_search_hybrid(V, period, lcv, second_band=B, plot_save=1, dir_save=target_dir)
             print '%10s %0.4f %0.8f' % (lcv, period, new_period)
             f_handle.write('%10s %0.4f %0.8f\n' % (lcv, data['period'][ind], new_period))
-            lightcurves.plot_phased_optical_lcv(U, B, V, R, I, new_period, lcv, datasets, plot_save=0)
+            lightcurves.plot_phased_optical_lcv(U, B, V, R, I, new_period, lcv, datasets, plot_save=1,folder=target_dir, colors=colors )
         except:
             print '%10s %0.4f %s' % (lcv, period, 'Not found')
             new_period = np.nan

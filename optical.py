@@ -193,9 +193,9 @@ def read_optical_catalog_old(target):
     print "Finished reading optical catalog."
     return(id_num, x, y, v_mags, ra, dec)
 
-def compile_datasets(target, old=0, folder='', returnColors=True):
+def compile_datasets(target, old=0, returnColors=True):
 
-    lcvs = glob.glob(folder+'lcvs/optical/*.lcv')
+    lcvs = glob.glob(target+'lcvs/optical/*.lcv')
 #    all_datasets = np.zeros(1, dtype='S30')
 #    all_jds = np.zeros(1, dtype=float)
     for lcv in lcvs:

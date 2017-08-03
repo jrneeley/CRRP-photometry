@@ -711,10 +711,9 @@ def period_search_LS(V, name, min_period = 0.2, max_period=1.0, plot_save=0, err
     power = LombScargle(x1, y1, er1).power(frequency)
     order = np.argsort(power)
     candidate_periods = 1/frequency[order[-10:]]
-    print power[order[-10:]]
     mp.plot(1/frequency, power)
-#    for period in candidate_periods:
-#        mp.axvline(period, color='r')
+    for period in candidate_periods:
+        mp.axvline(period, color='r', alpha=0.5)
 
     if plot_save == 0:
         mp.show()
@@ -723,14 +722,14 @@ def period_search_LS(V, name, min_period = 0.2, max_period=1.0, plot_save=0, err
     return candidate_periods
 
 
-def period_search_hybrid(V, initial_guess, name, second_band=None,
+def period_search_hybrid(first_band, initial_guess, name, second_band=None,
     plot_save=0, error_threshold=0.1, search_window=0.002,
-    num_investigate=5, step_size=10):
+    num_investigate=5, step_size=10, dir_save=''):
 
 
-    x = np.array(V[2][V[1] < error_threshold], dtype=float)
-    y = np.array(V[0][V[1] < error_threshold], dtype=float)
-    er = np.array(V[1][V[1] < error_threshold], dtype=float)
+    x = np.array(first_band[2][first_band[1] < error_threshold], dtype=float)
+    y = np.array(first_band[0][first_band[1] < error_threshold], dtype=float)
+    er = np.array(first_band[1][first_band[1] < error_threshold], dtype=float)
     if second_band is not None:
         x2 = np.array(second_band[2][second_band[1] < error_threshold], dtype=float)
         y2 = np.array(second_band[0][second_band[1] < error_threshold], dtype=float)
@@ -742,7 +741,7 @@ def period_search_hybrid(V, initial_guess, name, second_band=None,
     max_precision = n_cycles * approx_p / (n_cycles - 0.01) - approx_p
     order = np.ceil(np.abs(np.log10(max_precision)))
     precision = 10**order
-    print 'Max precision = 10^'+str(order)
+#    print 'Max precision = 10^'+str(order)
 
 
 
@@ -837,11 +836,11 @@ def period_search_hybrid(V, initial_guess, name, second_band=None,
         ax.axvline(best_periods[ind])
 
     if plot_save == 1:
-        mp.savefig('lcvs/'+name+'-hybrid.pdf')
+        mp.savefig(dir_save+'lcvs/'+name+'-hybrid.pdf')
     if plot_save == 0:
         mp.show()
     mp.close()
-    print best_periods
+#    print best_periods
 #    print best_stds
     best_period = best_periods[best_stds == np.min(best_stds)]
     if len(best_period) > 1:
