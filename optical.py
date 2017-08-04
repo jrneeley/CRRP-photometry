@@ -107,9 +107,9 @@ def read_fnl(optical_folder, target):
     print "Finished reading optical catalog."
     return data
 
-def find_variables_fnl(optical_folder, target, center_ra, center_dec, folder=''):
+def find_variables_fnl(optical_dir, target, center_ra, center_dec, data_dir=''):
 
-    catalog=optical_folder+target+'.fnl'
+    catalog=optical_dir+target+'.fnl'
 
     print "Reading optical catalog for "+target+"..."
 
@@ -124,7 +124,7 @@ def find_variables_fnl(optical_folder, target, center_ra, center_dec, folder='')
             master_id.append(int(temp[0]))
             variable_id.append(temp[-1])
 
-    data, dist = read_fnl_w_radial_dist(optical_folder, target, center_ra, center_dec)
+    data, dist = read_fnl_w_radial_dist(optical_dir, target, center_ra, center_dec)
     mags = np.zeros(len(master_id))
     errs = np.zeros(len(master_id))
     rad_dist = np.zeros(len(master_id))
@@ -161,7 +161,7 @@ def find_variables_fnl(optical_folder, target, center_ra, center_dec, folder='')
         dtype=[('c1', 'S10'), ('c2', int), ('c3', float), ('c4', float), ('c5', float),
         ('c6', float), ('c7', float), ('c8', float), ('c9', float), ('c10', 'S13'),
         ('c11', 'S13'), ('c12', float)])
-    np.savetxt(folder+'PeterIDs.txt', data_save, comments='',
+    np.savetxt(data_dir+'PeterIDs.txt', data_save, comments='',
         fmt='%10s %8i %7.3f %6.3f %7.3f %7.3f %7.3f %6.1f %7.4f %13s %13s %10.3f')
 
 

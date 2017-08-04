@@ -14,11 +14,11 @@ import re
 from astropy.stats import sigma_clip
 
 
-def find_stars_in_cat(optical_folder, target, channel, folder=''):
+def find_stars_in_cat(optical_dir, target, channel, data_dir=''):
 
-    cat_ids, x, y, ra, dec = optical.read_optical_fnl(optical_folder, target)
+    cat_ids, x, y, ra, dec = optical.read_optical_fnl(optical_dir, target)
 
-    reg_file = open(folder+channel+'.reg').read().replace(':', ' ')
+    reg_file = open(data_dir+channel+'.reg').read().replace(':', ' ')
     dtype1 = np.dtype([('ra_h', int), ('ra_m', int), ('ra_s', float),
         ('dec_d', int), ('dec_m', int), ('dec_s', float)])
     data = np.loadtxt(StringIO.StringIO(reg_file), dtype=dtype1)
@@ -31,7 +31,7 @@ def find_stars_in_cat(optical_folder, target, channel, folder=''):
 
     cal_ra, cal_dec = coordinates.hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s)
 
-    alf_list = glob.glob(folder+'all/'+channel+'*.alf')
+    alf_list = glob.glob(data_dir+'data/'+channel+'*.alf')
 
     phot_data = np.zeros(len(cal_ra), dtype=[('id', 'S8'), ('ra', float), ('dec', float),
         ('neigh', int), ('aor', int, len(alf_list)), ('f_num', int, len(alf_list)),
@@ -82,7 +82,7 @@ def find_stars_in_cat(optical_folder, target, channel, folder=''):
         if np.all(np.isnan(phot_data['psf_mag'][ind])):
             continue
 
-        np.savetxt(folder+'cal_stars/'+channel+'_'+phot_data['id'][ind]+'.coo',
+        np.savetxt(data_dir+'cal_stars/'+channel+'_'+phot_data['id'][ind]+'.coo',
             np.c_[phot_data['aor'][ind], phot_data['f_num'][ind],
             phot_data['x'][ind],phot_data['y'][ind],
             phot_data['psf_mag'][ind],
@@ -93,9 +93,9 @@ def find_stars_in_cat(optical_folder, target, channel, folder=''):
 
 
 
-def find_zp(channel, verbose=0, folder=''):
+def find_zp(channel, verbose=0, data_dir=''):
 
-    phot_list = glob.glob(folder+'cal_stars/'+channel+'*.phot')
+    phot_list = glob.glob(data_dir+'cal_stars/'+channel+'*.phot')
 
     n_stars = len(phot_list)
     zp = np.zeros(n_stars)
@@ -181,7 +181,7 @@ def find_zp(channel, verbose=0, folder=''):
     mp.errorbar(avg_mag, zp, yerr=zp_er, fmt='o', color='r')
     mp.xlabel('Aperture mag')
     mp.ylabel('Aperture - PSF mag')
-    mp.savefig(folder+channel+'-raw-zp.eps', format='eps')
+    mp.savefig(data_dir+channel+'-raw-zp.eps', format='eps')
 #    mp.show()
     mp.gcf().clear()
 
@@ -192,7 +192,7 @@ def find_zp(channel, verbose=0, folder=''):
     ax[1].plot(zp_er, zp, 'ro')
     ax[1].set_xlabel('ZP error')
     ax[1].set_ylabel('ZP')
-    mp.savefig(folder+channel+'-quality-check.eps', format='eps')
+    mp.savefig(data_dir+channel+'-quality-check.eps', format='eps')
     mp.show()
     mp.gcf().clear()
 #    mp.show()
@@ -225,7 +225,7 @@ def find_zp(channel, verbose=0, folder=''):
     mp.ylabel('Aperture - PSF')
     mp.xlabel('Aperture mag')
 #    mp.show()
-    mp.savefig(folder+channel+'-final-zp.eps', format='eps')
+    mp.savefig(data_dir+channel+'-final-zp.eps', format='eps')
     mp.gcf().clear()
 #    mp.plot(avg_mag, zp_er, 'ro', good_avg_mag, good_zp_er, 'bo')
 #    mp.show()
@@ -259,9 +259,9 @@ def find_zp_single_frame(infile):
     mp.plot(data['ap_mag'], zp, 'ro')
     mp.show()
 
-def apply_calibration(channel, zp, folder=''):
+def apply_calibration(channel, zp, data_dir=''):
 
-    alf_list = glob.glob(folder+'all/'+channel+'*.alf')
+    alf_list = glob.glob(data_dir+'data/'+channel+'*.alf')
 
     for alf in alf_list:
 

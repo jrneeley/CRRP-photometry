@@ -14,10 +14,10 @@ import os.path
 
 
 
-def make_lcv(channels, stars, dao_ids, folder=''):
+def make_lcv(channels, stars, dao_ids, data_dir=''):
 
-    lcv_folder = folder+'lcvs/mir/'
-    img_folder = folder+'all/'
+    lcv_folder = data_dir+'lcvs/mir/'
+    img_folder = data_dir+'data/'
     for channel in channels:
         file_list = glob.glob(img_folder+channel+'*.cal')
         if len(file_list) == 0:
@@ -244,12 +244,12 @@ def phase_lcv(lcv_file, period, T0, bin=0, save=1, plot=0, error_threshold=0.3):
             mp.show()
     mp.gcf().clear()
 
-def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_lcv=0, bin_mir=0, folder=''):
+def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_lcv=0, bin_mir=0, data_dir=''):
 
     fig = mp.figure(figsize=(8,10))
-    path_to_optical = folder+'lcvs/optical/'
-    path_to_nir = folder+'lcvs/nir/'
-    path_to_mir = folder+'lcvs/mir/'
+    path_to_optical = data_dir+'lcvs/optical/'
+    path_to_nir = data_dir+'lcvs/nir/'
+    path_to_mir = data_dir+'lcvs/mir/'
 
     if os.path.isfile(path_to_optical+target+lcv):
         optical_lcv = 1
@@ -278,14 +278,14 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
         mp.errorbar(Iph, I[0]-0.5, yerr=I[1], fmt='P')
 
         ## Add data to file
-        f_handle = open('/Users/jrneeley/CRRP/'+target+'/lcvs/'+phased_file, 'w')
+        f_handle = open(data_dir+'lcvs/'+phased_file, 'w')
 
         data_save = np.array(zip(np.repeat('U', len(U[2])), U[2], Uph, U[0], U[1], U[3]),
             dtype=[('c1', 'S2'), ('c2', float), ('c3', float), ('c4', float),
             ('c5', float), ('c6', 'S30')])
         np.savetxt(f_handle, data_save, fmt='%s %10.4f %8.6f %6.3f %5.3f %s')
         f_handle.close()
-        f_handle = open('/Users/jrneeley/CRRP/'+target+'/lcvs/'+phased_file, 'a')
+        f_handle = open(data_dir+'lcvs/'+phased_file, 'a')
         data_save = np.array(zip(np.repeat('B', len(B[2])), B[2], Bph, B[0], B[1], B[3]),
             dtype=[('c1', 'S2'), ('c2', float), ('c3', float), ('c4', float),
             ('c5', float), ('c6', 'S30')])
@@ -396,7 +396,7 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
     mp.ylabel('Mag + offset')
     mp.title(lcv)
     plot_file = re.sub('\.phased', '-ph.pdf', phased_file)
-    mp.savefig(folder+'lcvs/'+plot_file)
+    mp.savefig(data_dir+'lcvs/'+plot_file)
     mp.show()
     f_handle.close()
 
@@ -538,7 +538,7 @@ def plot_raw_optical_lcv(U):#, B, V, R, I):
     mp.show()
 
 def plot_phased_optical_lcv(U, B, V, R, I, period, name, datasets, plot_save=0,
-    folder='', error_threshold=0, colors=None):
+    data_dir='', error_threshold=0, colors=None):
 
 
     fig, axs = mp.subplots(5, 1, figsize=(10,13), sharex=True)
@@ -604,7 +604,7 @@ def plot_phased_optical_lcv(U, B, V, R, I, period, name, datasets, plot_save=0,
     axs[0].set_title(name+' P = {}'.format(period))
     axs[4].set_xlabel('Phase')
     if plot_save == 1:
-        mp.savefig(folder+'lcvs/optical/'+name+'-optical.pdf')
+        mp.savefig(data_dir+'lcvs/optical/'+name+'-optical.pdf')
     if plot_save == 0:
         mp.show()
 #    mp.gcf().clear()
@@ -724,7 +724,7 @@ def period_search_LS(V, name, min_period = 0.2, max_period=1.0, plot_save=0, err
 
 def period_search_hybrid(first_band, initial_guess, name, second_band=None,
     plot_save=0, error_threshold=0.1, search_window=0.002,
-    num_investigate=5, step_size=10, dir_save=''):
+    num_investigate=5, step_size=10, data_dir=''):
 
 
     x = np.array(first_band[2][first_band[1] < error_threshold], dtype=float)
@@ -836,7 +836,7 @@ def period_search_hybrid(first_band, initial_guess, name, second_band=None,
         ax.axvline(best_periods[ind])
 
     if plot_save == 1:
-        mp.savefig(dir_save+'lcvs/'+name+'-hybrid.pdf')
+        mp.savefig(data_dir+'lcvs/'+name+'-hybrid.pdf')
     if plot_save == 0:
         mp.show()
     mp.close()
@@ -847,7 +847,7 @@ def period_search_hybrid(first_band, initial_guess, name, second_band=None,
         best_period = best_period[0]
     return best_period
 
-def gloess(phased_lcv_file, clean=0, smoothing_params=None, plot_save=0, folder=''):
+def gloess(phased_lcv_file, clean=0, smoothing_params=None, plot_save=0, data_dir=''):
 
     figtosave = mp.figure(figsize=(8,10))
     ax = figtosave.add_subplot(111)
