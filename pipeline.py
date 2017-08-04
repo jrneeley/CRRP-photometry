@@ -13,19 +13,23 @@ import coordinates
 import optical
 import numpy as np
 
-target_name = sys.argv[1]
+target = sys.argv[1]
 channel = sys.argv[2]
 exptime = sys.argv[3]
 
-file_list = glob.glob('all/'+channel+'*[0-9].fits')
-dn_list = glob.glob('all/'+channel+'*_dn.fits')
+file_list = glob.glob('data/'+channel+'*[0-9].fits')
+dn_list = glob.glob('data/'+channel+'*_dn.fits')
 
 # Identify relevant paths
-dao_folder = '/Users/jrneeley/Daophot/'
-optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
+#dao_folder = '/Users/jrneeley/Daophot/'
+#optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
+dao_dir = '/usr/local/phot/'
+optical_dir = '/Volumes/Annie/CRRP/OpticalCatalogs/'
+opt_dir = '/Volumes/Annie/CRRP/OPTfiles/'
+#dao_dir, optical_dir, opt_dir = daophot_setup.folder_setup()
 
 # Copy appropriate opt files to current directory
-daophot_setup.set_opt_files(channel, exptime)
+daophot_setup.set_opt_files(opt_dir, channel, exptime, warm=1)
 
 # Convert images to counts
 if (len(dn_list) == 0):
@@ -36,9 +40,9 @@ if (len(dn_list) == 0):
 else:
 	print "Files already converted to counts."
 
-dn_list = glob.glob('all/'+channel+'*dn.fits')
+dn_list = glob.glob('data/'+channel+'*dn.fits')
 
-# Define fields (Note: you need to create lists ahead of time for maps)
+# Define fields (Note: For now, you need to create lists ahead of time for maps)
 num_fields, fields = daophot_setup.find_fields(file_list, channel)
 print str(num_fields)+' fields defined with '+str(len(fields[0]))+' images each.'
 
@@ -58,7 +62,7 @@ if (start <= 0):
 ## Run DAOPHOT
 	print "Starting DAOPHOT"
 	for image in dn_list:
-		daophot.init_phot(dao_folder, target_name, image)
+		daophot.init_phot(dao_dir, target, image)
 
 	print "Initial aperture photometry complete."
 
@@ -66,13 +70,13 @@ if (start <= 1):
 ## Find PSF on first frame only (manually)
 	master_frame = raw_input("Identify master frame: ")
 #	daophot.find_psf(master_frame)
-## Copy this PSF to each epoch
 
+## Copy the master PSF to each epoch
 	master_file = re.sub(".fits",".psf",master_frame)
 	shutil.copy(master_file, 'master.psf')
 
-	shutil.copy(master_frame, re.sub("all","master",master_frame))
-	shutil.copy(master_file, re.sub("all","master",master_file))
+	shutil.copy(master_frame, re.sub("data","master",master_frame))
+	shutil.copy(master_file, re.sub("data","master",master_file))
 
 	for file in dn_list:
 		psfname = re.sub(".fits",".psf", file)
@@ -81,25 +85,25 @@ if (start <= 2):
 ## Run ALLSTAR
 	print "Starting ALLSTAR..."
 	for file in dn_list:
-		allstar.allstar_init(dao_folder, target_name, file)
+		allstar.allstar_init(dao_dir, target, file)
 	print "ALLSTAR complete."
 
 if (start <= 3):
 ## Run DAOMATCH
 ## You may want to check the .mch files after this step
-	daomatch.daomatch_init(dao_folder, channel, target_name, fields, num_fields)
+	daomatch.daomatch_init(dao_dir, channel, target, fields, num_fields)
 	print "DAOMATCH complete."
 
 ## Run DAOMASTER
 if (start <= 4):
 	for x in range(0,num_fields):
 #		print "Working on field "+ str(x+1)
-		daomaster.daomaster_init(dao_folder, channel+"_field"+str(x+1)+".mch")
+		daomaster.daomaster_init(dao_dir, channel+"_field"+str(x+1)+".mch")
 
 ## Find appropriate window in source catalog
 if (start <=5):
 
-	ids, xcat, ycat, ra, dec = optical.read_optical_fnl(optical_folder, target_name)
+	ids, xcat, ycat, ra, dec = optical.read_optical_fnl(optical_dir, target)
 
 	xmin = np.zeros(num_fields)
 	xmax = np.zeros(num_fields)
@@ -111,7 +115,7 @@ if (start <=5):
 		print "Calculating field " + str(ind+1)+ " boundaries..."
 		x1, x2, y1, y2 = coordinates.find_coord_window(fields[ind])
 		print x1, x2, y1, y2
-		c1, c2, c3, c4 = coordinates.radec2pix(target_name, x1, x2, y1, y2, xcat, ycat, ra, dec)
+		c1, c2, c3, c4 = coordinates.radec2pix(target, x1, x2, y1, y2, xcat, ycat, ra, dec)
 		print "Xmin, Xmax, Ymin, Ymax for optical catalog:"
 		print c1, c2, c3, c4
 		xmin[ind] = c1

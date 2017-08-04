@@ -7,13 +7,13 @@ import glob
 import os
 
 
-def daomaster_init(dao_folder, matchfile):
+def daomaster_init(dao_dir, matchfile):
 
 ## Clean up previous runs
     magfile=re.sub(".mch", ".mag", matchfile)
     if (os.path.isfile(magfile)):
             os.remove(magfile)
-    daomaster = pexpect.spawn(dao_folder+'daomaster')
+    daomaster = pexpect.spawn(dao_dir+'daomaster')
     daomaster.logfile = sys.stdout
 
     daomaster.expect("File with list of input files")
@@ -74,13 +74,13 @@ def daomaster_init(dao_folder, matchfile):
     daomaster.close(force=True)
 
 
-def daomaster_mosaic(dao_folder, matchfile):
+def daomaster_mosaic(dao_dir, matchfile):
 
 ## Clean up previous runs
     magfile=re.sub(".mch", ".mag", matchfile)
     if (os.path.isfile(magfile)):
             os.remove(magfile)
-    daomaster = pexpect.spawn(dao_folder+'daomaster')
+    daomaster = pexpect.spawn(dao_dir+'daomaster')
     daomaster.logfile = sys.stdout
 
     daomaster.expect("File with list of input files")

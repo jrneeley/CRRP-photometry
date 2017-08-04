@@ -10,7 +10,7 @@ from astropy.io import fits
 import sys
 
 
-def allstar_init(dao_folder, target, fitsfile):
+def allstar_init(dao_dir, target, fitsfile):
 
 	temp=re.sub(".fits","", fitsfile)
 
@@ -20,12 +20,12 @@ def allstar_init(dao_folder, target, fitsfile):
         for ext in extensions:
                 if (os.path.isfile(temp + ext)):
                         os.remove(temp+ext)
-        image=re.sub("all/",target+":", temp)
+        image=re.sub("data/",target+":", temp)
 
     #    print "Working on " + image
 
 ## Running ALLSTAR
-	allstar = pexpect.spawn(dao_folder+'allstar')
+	allstar = pexpect.spawn(dao_dir+'allstar')
 	#allstar.logfile = sys.stdout
 
 	allstar.expect("OPT")
@@ -44,7 +44,7 @@ def allstar_init(dao_folder, target, fitsfile):
 	allstar.expect("Good bye")
 	allstar.close()
 
-def allstar_mosaic(dao_folder, target, fitsfile):
+def allstar_mosaic(dao_dir, target, fitsfile):
 
 	temp=re.sub(".fits","", fitsfile)
 

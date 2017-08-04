@@ -9,9 +9,9 @@ import glob
 from astropy.time import Time
 import plotting_utilities
 
-def read_optical_catalog(optical_folder, target):
+def read_optical_catalog(optical_dir, target):
 
-    catalog=optical_folder+target+'.dat'
+    catalog=optical_dir+target+'.dat'
 
     print "Reading optical catalog for "+target+"..."
 
@@ -35,9 +35,9 @@ def read_optical_catalog(optical_folder, target):
     print "Finished reading optical catalog."
     return(id_num, x, y, ra, dec)
 
-def read_optical_fnl(optical_folder, target):
+def read_optical_fnl(optical_dir, target):
 
-    catalog=optical_folder+target+'.fnl'
+    catalog=optical_dir+target+'.fnl'
 
     print "Reading optical catalog for "+target+"..."
 
@@ -61,9 +61,9 @@ def read_optical_fnl(optical_folder, target):
     print "Finished reading optical catalog."
     return(id_num, x, y, ra, dec)
 
-def read_fnl_w_radial_dist(optical_folder, target, center_ra, center_dec):
+def read_fnl_w_radial_dist(optical_dir, target, center_ra, center_dec):
 
-    catalog=optical_folder+target+'.fnl'
+    catalog=optical_dir+target+'.fnl'
 
     print "Reading optical catalog for "+target+"..."
 

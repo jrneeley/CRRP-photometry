@@ -8,10 +8,11 @@ import matplotlib.pyplot as mp
 import sys
 from matplotlib.ticker import ScalarFormatter
 
-def folder():
-	daophot_folder = raw_input("Enter path to Daophot executables: ")
-	optical_folder = raw_input("Enter path to optical catalogs: ")
-	return daophot_folder, optical_folder
+def folder_setup():
+	daophot_dir = raw_input("Enter path to Daophot executables: ")
+	optical_dir = raw_input("Enter path to optical catalogs: ")
+	opt_dir = raw_input("Enter path to OPT files: ")
+	return daophot_dir, optical_dir, opt_dir
 
 def spitzer_flux2dn(image, newname=""):
 
@@ -26,29 +27,29 @@ def spitzer_flux2dn(image, newname=""):
 	scidata *= exptime/fluxconv
 
 
-def set_opt_files(channel, exptime, warm=1):
+def set_opt_files(opt_dir, channel, exptime, warm=1):
 
-	opt_dir = '/Users/jrneeley/CRRP/OPTfiles/'
-	opt_folder = '/Users/jrneeley/CRRP/OPTfiles/warm/'
+	if warm == 1:
+		opt_dir2 = opt_dir+'warm/'
 	if warm == 0:
-		opt_folder = '/Users/jrneeley/CRRP/OPTfiles/cryo/'
+		opt_dir2 = opt_dir+'cryo/'
 
 	if (channel == 'I1'):
-		optfile = opt_folder+'ch1-'+str(exptime)+'s.opt'
+		optfile = opt_dir2+'ch1-'+str(exptime)+'s.opt'
 	if (channel == 'I2'):
-		optfile = opt_folder+'ch2-'+str(exptime)+'s.opt'
+		optfile = opt_dir2+'ch2-'+str(exptime)+'s.opt'
 	shutil.copy(optfile, 'daophot.opt')
 	shutil.copy(opt_dir+'photo.opt', 'photo.opt')
 	shutil.copy(opt_dir+'allstar.opt', 'allstar.opt')
 	shutil.copy(opt_dir+'allframe.opt', 'allframe.opt')
 
-def set_opt_files_mosaic(channel, exptime, warm=1):
+def set_opt_files_mosaic(opt_dir, channel, exptime, warm=1):
 
-	opt_dir = '/Users/jrneeley/CRRP/OPTfiles/'
-	opt_folder = '/Users/jrneeley/CRRP/OPTfiles/warm/'
+	opt_dir = '/Users/jrneeley/CRRP/OPTfiles/warm/'
 	if warm == 0:
-		opt_folder = '/Users/jrneeley/CRRP/OPTfiles/cryo/'
-
+		opt_folder = opt_dir+'cryo/'
+	if warm == 1:
+		opt_folder = opt_dir+'warm/'
 	if (channel == 'I1'):
 		optfile = opt_folder+'ch1-'+str(exptime)+'s-mosaic.opt'
 	if (channel == 'I2'):
