@@ -14,7 +14,7 @@ import optical
 import numpy as np
 from astropy.io import fits
 
-target_name = sys.argv[1]
+target = sys.argv[1]
 channel = sys.argv[2]
 exptime = sys.argv[3]
 
@@ -22,11 +22,12 @@ file_list = glob.glob('mosaics/'+channel+'*.fits')
 dn_list = glob.glob('mosaics/'+channel+'*_dn.fits')
 
 # Identify relevant paths
-dao_folder = '/Users/jrneeley/Daophot/'
-optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
+dao_dir = '/usr/local/phot/'
+optical_dir = '/Volumes/Annie/CRRP/OpticalCatalogs/'
+opt_dir = '/Volumes/Annie/CRRP/OPTfiles/'
 
 # Set daophot.opt file to appropriate channel
-daophot_setup.set_opt_files_mosaic(channel, exptime)
+daophot_setup.set_opt_files_mosaic(opt_dir, channel, exptime)
 
 # Convert images to counts
 if (len(dn_list) == 0):
@@ -54,7 +55,7 @@ if (start <= 0):
 ## Run DAOPHOT
 	print "Starting DAOPHOT"
 	for image in dn_list:
-		daophot.init_phot(dao_folder, target_name, image)
+		daophot.init_phot(dao_dir, target, image)
 
 	print "Initial aperture photometry complete."
 
@@ -73,7 +74,7 @@ if (start <= 1):
 	outfile = channel+'-half-mosaic.fits'
 	hdu = fits.PrimaryHDU(newdata)
 	hdu.writeto(outfile, clobber=True)
-	
+
 
 ## Find PSF on first frame only (manually)
 #	master_frame = raw_input("Identify master frame: ")
@@ -93,19 +94,19 @@ if (start <= 2):
 ## Run ALLSTAR
 	print "Starting ALLSTAR..."
 	for dn in dn_list:
-		allstar.allstar_mosaic(dao_folder, target_name, dn)
+		allstar.allstar_mosaic(dao_dir, target, dn)
 	print "ALLSTAR complete."
 
 if (start <= 3):
 ## Run DAOMATCH
 ## You may want to check the .mch files after this step
-	daomatch.daomatch_mosaic(dao_folder, channel, target_name, dn_list)
+	daomatch.daomatch_mosaic(dao_dir, channel, target, dn_list)
 	print "DAOMATCH complete."
 
 
 if (start <= 4):
 ## Run DAOMASTER
-	daomaster.daomaster_mosaic(dao_folder, channel+"_mosaic.mch")
+	daomaster.daomaster_mosaic(dao_dir, channel+"_mosaic.mch")
 
 ## Find appropriate window in source catalog
 if (start <=5):
@@ -117,12 +118,12 @@ if (start <=5):
 	ymin = np.min(data['y'])
 	ymax = np.max(data['y'])
 
-	ids, xcat, ycat, ra, dec = optical.read_optical_fnl(optical_folder, target_name)
+	ids, xcat, ycat, ra, dec = optical.read_optical_fnl(optical_dir, target)
 
 	print "Calculating field boundaries..."
 	x1, x2, y1, y2 = coordinates.find_coord_window_mosaic(dn_list[0], xmin, xmax, ymin, ymax)
 	print x1, x2, y1, y2
-	c1, c2, c3, c4 = coordinates.radec2pix(target_name, x1, x2, y1, y2, xcat, ycat, ra, dec)
+	c1, c2, c3, c4 = coordinates.radec2pix(target, x1, x2, y1, y2, xcat, ycat, ra, dec)
 	print "Xmin, Xmax, Ymin, Ymax for optical catalog:"
 	print c1, c2, c3, c4
 	xmin = [c1]

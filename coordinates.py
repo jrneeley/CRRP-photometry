@@ -29,13 +29,13 @@ def find_coord_window(img_list):
         ymax = max(y1, y2, y3, y4)
 
         if (xmin < bxmin):
-            bxmin = xmin
+            bxmin = min(x1, x2, x3, x4)
         if (xmax > bxmax):
-            bxmax = xmax
+            bxmax = max(x1, x2, x3, x4)
         if (ymin < bymin):
-            bymin = ymin
+            bymin = min(y1, y2, y3, y4)
         if (ymax > bymax):
-            bymax = ymax
+            bymax = max(y1, y2, y3, y4)
 
     return(bxmin, bxmax, bymin, bymax)
 
@@ -55,27 +55,25 @@ def find_coord_window_mosaic(img, xmin, xmax, ymin, ymax):
     return(bxmin, bxmax, bymin, bymax)
 
 # Convert celestial coordinates to pixels using optical catalog
-def radec2pix(target, xmin, xmax, ymin, ymax, x, y, ra, dec):
+def radec2catalogpix(ra_in, dec_in, catalog_x, catalog_y, catalog_ra, catalog_dec):
 
-    index_xmin = np.searchsorted(ra, xmin)
-    index_xmax = np.searchsorted(ra, xmax)
-    dec2 = np.sort(dec)
-    y2 = y[np.argsort(dec)]
-    index_ymin = np.searchsorted(dec2, ymin)
-    index_ymax = np.searchsorted(dec2, ymax)
+    index_x = np.searchsorted(catalog_ra, ra_in)
+    catalog_dec2 = np.sort(catalog_dec)
+    catalog_y2 = catalog_y[np.argsort(catalog_dec)]
+    index_y = np.searchsorted(catalog_dec2, dec_in)
 
-    cat_xmin = x[index_xmin]
-    if index_xmax == len(ra):
-        cat_xmax = x[index_xmax-1]
-    else:
-        cat_xmax = x[index_xmax]
-    cat_ymin = y2[index_ymin]
-    if index_ymax == len(dec2):
-        cat_ymax = y2[index_ymax-1]
-    else:
-        cat_ymax = y2[index_ymax]
+    target_x = catalog_x[index_x]
+#    if index_x == len(ra):
+#        cat_xmax = x[index_xmax-1]
+#    else:
+#        cat_xmax = x[index_xmax]
+    target_y = catalog_y2[index_y]
+#    if index_ymax == len(dec2):
+#        cat_ymax = y2[index_ymax-1]
+#    else:
+#        cat_ymax = y2[index_ymax]
 
-    return(cat_xmin, cat_xmax, cat_ymin, cat_ymax)
+    return(target_x, target_y)
 
 # Convert coordinates in sexagesimal to decimal units
 def hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s):
@@ -87,16 +85,19 @@ def hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s):
             dec = dec_d + dec_m/60. + dec_s/3600.
         ra = 15*(ra_h+ra_m/60.+ra_s/3600.)
     else:
-        dec = []
-        for ind in range(0,len(ra_h)):
+        dec = np.zeros(len(dec_d))
+        for ind, d in enumerate(dec_d):
             if dec_d[ind] < 0:
-                dec.append(dec_d[ind] - dec_m[ind]/60. - dec_s[ind]/3600.)
-            if dec_d[ind] > 0:
-                dec.append(dec_d[ind] + dec_m[ind]/60. + dec_s[ind]/3600.)
+            #    dec.append(dec_d[ind] - dec_m[ind]/60. - dec_s[ind]/3600.)
+                dec[ind] = dec_d[ind] - dec_m[ind]/60. - dec_s[ind]/3600.
+            if dec_d[ind] >= 0:
+            #    dec.append(dec_d[ind] + dec_m[ind]/60. + dec_s[ind]/3600.)
+                dec[ind] = dec_d[ind] + dec_m[ind]/60. + dec_s[ind]/3600.
 #    if len(ra_h) > 1:
-        ra = []
-        for ind in range(0,len(ra_h)):
-            ra.append(15.*(ra_h[ind]+ra_m[ind]/60.+ra_s[ind]/3600.))
+        ra = np.zeros(len(ra_h))
+        for ind, r in enumerate(ra_h):
+            #ra.append(15.*(ra_h[ind]+ra_m[ind]/60.+ra_s[ind]/3600.))
+            ra[ind] = 15.*(ra_h[ind]+ra_m[ind]/60.+ra_s[ind]/3600.)
 
     return ra, dec
 

@@ -757,7 +757,7 @@ def period_search_hybrid(first_band, initial_guess, name, second_band=None,
     frequency = np.linspace(freq_min, freq_max, 1000)
     power = LombScargle(x, y, er).power(frequency)
     order = np.argsort(power)
-## new
+
     possible_periods = 1/frequency[order[-num_investigate:]]
     bins = np.linspace(min_period, max_period, 11)
     bin_index = np.digitize(possible_periods, bins)
@@ -772,12 +772,6 @@ def period_search_hybrid(first_band, initial_guess, name, second_band=None,
         power_in_bin = power[(frequency <= max_f) & (frequency >= min_f)]
         max_power = np.max(power_in_bin)
         candidate_periods[ind] = 1/frequency[power == max_power]
-## old
-#    possible_periods = 1/frequency[order[-num_investigate:]]
-#    bins = np.linspace(min_period, max_period, 11)
-#    test = np.digitize(possible_periods, bins)
-#    candidate_periods = np.unique(bins[test-1]+search_window/20)
-#    num_candidates = len(candidate_periods)
 
 
     fig = mp.figure(figsize=(4*num_candidates, 12))

@@ -8,6 +8,7 @@ import lightcurves
 import glob
 from astropy.time import Time
 import plotting_utilities
+import read_dao
 
 def read_optical_catalog(optical_dir, target):
 
@@ -89,9 +90,9 @@ def read_fnl_w_radial_dist(optical_dir, target, center_ra, center_dec):
     print "Finished reading optical catalog."
     return(data, dist)
 
-def read_fnl(optical_folder, target):
+def read_fnl(optical_dir, target):
 
-    catalog=optical_folder+target+'.fnl'
+    catalog=optical_dir+target+'.fnl'
 
     print "Reading optical catalog for "+target+"..."
 
@@ -164,7 +165,19 @@ def find_variables_fnl(optical_dir, target, center_ra, center_dec, data_dir=''):
     np.savetxt(data_dir+'PeterIDs.txt', data_save, comments='',
         fmt='%10s %8i %7.3f %6.3f %7.3f %7.3f %7.3f %6.1f %7.4f %13s %13s %10.3f')
 
+def cut_optical_catalog(optical_dir, target, xmin, xmax, ymin, ymax):
 
+    ID, x, y, mag, err = read_dao.read_mag(optical_dir+target+'-I.mag')
+    MIRfov = np.argwhere(x >= xmin) #& x <= xmax & y >= ymin & y <= ymax)
+    ID_new = ID[(x >= xmin) & (x <= xmax) & (y >= ymin) & (y <= ymax)]
+    x_new = x[(x >= xmin) & (x <= xmax) & (y >= ymin) & (y <= ymax)]
+    y_new = y[(x >= xmin) & (x <= xmax) & (y >= ymin) & (y <= ymax)]
+    mag_new = mag[(x >= xmin) & (x <= xmax) & (y >= ymin) & (y <= ymax)]
+    err_new = err[(x >= xmin) & (x <= xmax) & (y >= ymin) & (y <= ymax)]
+
+
+    np.savetxt(optical_dir+target+'-Icut.mag', zip(ID_new, x_new, y_new,
+        mag_new, err_new), fmt = '%8.0f %8.2f %8.3f %7.3f %6.4f ')
 
 def read_optical_catalog_old(target):
 

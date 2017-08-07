@@ -45,15 +45,14 @@ def set_opt_files(opt_dir, channel, exptime, warm=1):
 
 def set_opt_files_mosaic(opt_dir, channel, exptime, warm=1):
 
-	opt_dir = '/Users/jrneeley/CRRP/OPTfiles/warm/'
 	if warm == 0:
-		opt_folder = opt_dir+'cryo/'
+		opt_dir2 = opt_dir+'cryo/'
 	if warm == 1:
-		opt_folder = opt_dir+'warm/'
+		opt_dir2 = opt_dir+'warm/'
 	if (channel == 'I1'):
-		optfile = opt_folder+'ch1-'+str(exptime)+'s-mosaic.opt'
+		optfile = opt_dir2+'ch1-'+str(exptime)+'s-mosaic.opt'
 	if (channel == 'I2'):
-		optfile = opt_folder+'ch2-'+str(exptime)+'s-mosaic.opt'
+		optfile = opt_dir2+'ch2-'+str(exptime)+'s-mosaic.opt'
 	shutil.copy(optfile, 'daophot.opt')
 	shutil.copy(opt_dir+'photo.opt', 'photo.opt')
 	shutil.copy(opt_dir+'allstar-mosaic.opt', 'allstar.opt')
