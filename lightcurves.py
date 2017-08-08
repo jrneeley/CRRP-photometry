@@ -517,6 +517,20 @@ def read_optical_lcv(lcv_file, old=0):
     U[3][:] = data['source'][data['filter'] == 5]
 
     return U, B, V, R, I
+def select_datasets(V, datasets):
+
+    datasets_prefix = np.zeros(len(V[3]), dtype='S30')
+    for ind, string in enumerate(V[3]):
+        datasets_prefix[ind] = string.split(':')[0]
+    num_match = len(V[3][datasets_prefix == dataset])
+
+    V_new = np.zeros((4, num_match), dtype=object)
+
+    V_new[0] = V[0][datasets_prefix == dataset]
+    V_new[1] = V[1][datasets_prefix == dataset]
+    V_new[2] = V[2][datasets_prefix == dataset]
+    V_new[3] = V[3][datasets_prefix == dataset]
+    return V_new
 
 def plot_raw_optical_lcv(U):#, B, V, R, I):
 
@@ -617,19 +631,20 @@ def plot_phased_optical_one_band(data, period, name, datasets, plot_save=0):
     mjd = data[2]
     source = data[3]
 
-    sources_prefix = np.zeros(len(source), dtype='S30')
-    for ind, string in enumerate(source):
-        sources_prefix[ind] = string.split(':')[0]
+#    sources_prefix = np.zeros(len(source), dtype='S30')
+#    for ind, string in enumerate(source):
+#        sources_prefix[ind] = string.split(':')[0]
 
     phase = np.mod(mjd/period, 1)
 
-    for ind, dataset in enumerate(datasets):
-        ph = phase[sources_prefix == dataset]
-        mag = mags[sources_prefix == dataset]
-        err = errs[sources_prefix == dataset]
-        if len(ph) == 0:
-            continue
-        mp.errorbar(ph, mag, yerr=err, fmt='o', color=plotting_utilities.get_color(ind))
+#    for ind, dataset in enumerate(datasets):
+#        ph = phase[sources_prefix == dataset]
+#        mag = mags[sources_prefix == dataset]
+#        err = errs[sources_prefix == dataset]
+#        if len(ph) == 0:
+#            continue
+#        mp.errorbar(ph, mag, yerr=err, fmt='o', color=plotting_utilities.get_color(ind))
+    mp.errorbar(phase, mags, yerr=errs, fmt='o', color='k')
     mp.ylim(np.max(mags)+0.05, np.min(mags)-0.05)
 
     mp.title(name+' P = {}'.format(period))
