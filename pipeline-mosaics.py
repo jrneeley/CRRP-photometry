@@ -118,18 +118,21 @@ if (start <=5):
 	ymin = np.min(data['y'])
 	ymax = np.max(data['y'])
 
-	ids, xcat, ycat, ra, dec = optical.read_optical_fnl(optical_dir, target)
+	ids, catalog_x, catalog_y, catalog_ra, catalog_dec = optical.read_optical_fnl(optical_dir, target)
 
 	print "Calculating field boundaries..."
-	x1, x2, y1, y2 = coordinates.find_coord_window_mosaic(dn_list[0], xmin, xmax, ymin, ymax)
-	print x1, x2, y1, y2
-	c1, c2, c3, c4 = coordinates.radec2pix(target, x1, x2, y1, y2, xcat, ycat, ra, dec)
+	ra1, ra2, dec1, dec2 = coordinates.find_coord_window_mosaic(dn_list[0], xmin, xmax, ymin, ymax)
+	print ra1, ra2, dec1, dec2
+	min_x, min_y = coordinates.radec2catalogpix(ra1, dec1, catalog_x, catalog_y, catalog_ra, catalog_dec)
+	max_x, max_y = coordinates.radec2catalogpix(ra2, dec2, catalog_x, catalog_y, catalog_ra, catalog_dec)
+#		c1, c2, c3, c4 = coordinates.radec2pix(target, x1, x2, y1, y2, xcat, ycat, ra, dec)
 	print "Xmin, Xmax, Ymin, Ymax for optical catalog:"
-	print c1, c2, c3, c4
-	xmin = [c1]
-	xmax = [c2]
-	ymin = [c3]
-	ymax = [c4]
+	print min_x, max_x, min_y, max_y
+
+	xmin = [min_x]
+	xmax = [max_x]
+	ymin = [min_y]
+	ymax = [max_y]
 	f = ['Field1']
 
 # Save boundary window for each field into a text file (e.g. I1-catalog-cuts.txt)

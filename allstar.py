@@ -58,7 +58,7 @@ def allstar_mosaic(dao_dir, target, fitsfile):
 
 	#print "Working on " + image
 ## Running ALLSTAR
-	allstar = pexpect.spawn(dao_folder+'allstar')
+	allstar = pexpect.spawn(dao_dir+'allstar')
 	#allstar.logfile = sys.stdout
 
 	allstar.expect("OPT")
@@ -76,5 +76,5 @@ def allstar_mosaic(dao_dir, target, fitsfile):
 	allstar.expect("Name for subtracted image")
 	allstar.sendline("")
 	allstar.expect("stars")
-	allstar.expect("Good bye")
+	allstar.expect("Good bye", timeout=600)
 	allstar.close()
