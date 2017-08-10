@@ -39,10 +39,10 @@ if refine == 0:
         period = data['period'][data['id'] == lcv]
         try:
             U, B, V, R, I = lightcurves.read_optical_lcv(lcv_file, old=0)
-            new_period = lightcurves.period_search_hybrid(V, period, lcv, second_band=B, plot_save=1, dir_save=target_dir)
+            new_period = lightcurves.period_search_hybrid(V, period, lcv, second_band=B, plot_save=1, data_dir=target_dir)
             print '%10s %0.4f %0.8f' % (lcv, period, new_period)
             f_handle.write('%10s %0.4f %0.8f\n' % (lcv, data['period'][ind], new_period))
-            lightcurves.plot_phased_optical_lcv(U, B, V, R, I, new_period, lcv, datasets, plot_save=1,folder=target_dir, colors=colors )
+            lightcurves.plot_phased_optical_lcv(U, B, V, R, I, new_period, lcv, datasets, plot_save=1,data_dir=target_dir, colors=colors )
         except:
             print '%10s %0.4f %s' % (lcv, period, 'Not found')
             new_period = np.nan

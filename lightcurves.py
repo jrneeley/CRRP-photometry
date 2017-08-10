@@ -722,20 +722,29 @@ def period_search_LS(V, name, min_period = 0.2, max_period=1.0, plot_save=0, err
 
     freq_max = 1/(min_period)
     freq_min = 1/(max_period)
-    frequency = np.linspace(freq_min, freq_max, 10000)
-    power = LombScargle(x1, y1, er1).power(frequency)
+#    frequency = np.linspace(freq_min, freq_max, 10000)
+    frequency, power = LombScargle(x1, y1, er1).autopower(minimum_frequency=freq_min,
+                        maximum_frequency=freq_max )
     order = np.argsort(power)
     candidate_periods = 1/frequency[order[-10:]]
     mp.plot(1/frequency, power)
-    for period in candidate_periods:
-        mp.axvline(period, color='r', alpha=0.5)
+#    for period in candidate_periods:
+#        mp.axvline(period, color='r', alpha=0.5)
 
     if plot_save == 0:
         mp.show()
     mp.close()
 
-    return candidate_periods
+    best_frequency = frequency[np.argmax(power)]
+    t_fit = np.linspace(0,1)
+    y_fit = LombScargle(x1, y1, er1, nterms=2).model(t_fit, best_frequency)
 
+    phase_data = np.mod(x1*best_frequency, 1)
+    mp.plot(phase_data, y1, 'o')
+    mp.plot(t_fit, y_fit)
+    mp.show()
+#    return candidate_periods
+    return 1/best_frequency
 
 def period_search_hybrid(first_band, initial_guess, name, second_band=None,
     plot_save=0, error_threshold=0.1, search_window=0.002,
@@ -769,8 +778,9 @@ def period_search_hybrid(first_band, initial_guess, name, second_band=None,
 # Do initial Lomb Scargle
     freq_max = 1/min_period
     freq_min = 1/max_period
-    frequency = np.linspace(freq_min, freq_max, 1000)
-    power = LombScargle(x, y, er).power(frequency)
+#    frequency = np.linspace(freq_min, freq_max, 1000)
+    frequency, power = LombScargle(x, y, er).autopower(minimum_frequency=freq_min,
+                        maximum_frequency=freq_max )
     order = np.argsort(power)
 
     possible_periods = 1/frequency[order[-num_investigate:]]
@@ -789,8 +799,8 @@ def period_search_hybrid(first_band, initial_guess, name, second_band=None,
         candidate_periods[ind] = 1/frequency[power == max_power]
 
 
-    fig = mp.figure(figsize=(4*num_candidates, 12))
-    ax1 = mp.subplot2grid((4,num_candidates), (0,0), colspan=num_candidates)
+    fig = mp.figure(figsize=(4*num_candidates, 6))
+    ax1 = mp.subplot2grid((2,num_candidates), (0,0), colspan=num_candidates)
     ax1.plot(1/frequency, power)
 
     best_periods = np.copy(candidate_periods)
@@ -799,23 +809,23 @@ def period_search_hybrid(first_band, initial_guess, name, second_band=None,
         ax1.axvline(period, color='r')
         period_range = search_window
 
-        for iteration in range(2):
+#        for iteration in range(2):
 
-            period_range = period_range/step_size
+#            period_range = period_range/step_size
 
-            freq_max = 1/(best_periods[ind]-period_range/2)
-            freq_min = 1/(best_periods[ind]+period_range/2)
-            frequency = np.linspace(freq_min, freq_max, 1000)
-            power = LombScargle(x, y, er).power(frequency)
-            order = np.argsort(power)
-            best_periods[ind] = 1/frequency[order[-1]]
+#            freq_max = 1/(best_periods[ind]-period_range/2)
+#            freq_min = 1/(best_periods[ind]+period_range/2)
+#            frequency = np.linspace(freq_min, freq_max, 1000)
+#            power = LombScargle(x, y, er).power(frequency)
+#            order = np.argsort(power)
+#            best_periods[ind] = 1/frequency[order[-1]]
 
-            ax = mp.subplot2grid((4,num_candidates), (iteration+1, ind))
-            ax.plot(1/frequency, power)
+#            ax = mp.subplot2grid((4,num_candidates), (iteration+1, ind))
+#            ax.plot(1/frequency, power)
 
     #    print best_period
 
-        search_range = period_range
+        search_range = period_range/100
         grid_num = search_range*precision
 
         if grid_num > 100000:
@@ -840,7 +850,7 @@ def period_search_hybrid(first_band, initial_guess, name, second_band=None,
         best_periods[ind] = periods[order[0]]
         best_stds[ind] = avg_std[order[0]]
 
-        ax = mp.subplot2grid((4,num_candidates), (3, ind))
+        ax = mp.subplot2grid((2,num_candidates), (1, ind))
         ax.plot(periods, avg_std, 'ro')
         ax.axvline(best_periods[ind])
 
