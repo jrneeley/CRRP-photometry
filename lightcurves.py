@@ -11,7 +11,7 @@ from scipy.interpolate import interp1d
 from scipy import signal
 from matplotlib import gridspec
 import os.path
-
+import peakutils
 
 
 def make_lcv(channels, stars, dao_ids, data_dir=''):
@@ -211,11 +211,6 @@ def phase_lcv(lcv_file, period, T0, bin=0, save=1, plot=0, error_threshold=0.3):
                 ('c2', float), ('c3', float), ('c4', float), ('c5', float)])
             np.savetxt(f_handle, data_save, fmt='%s %10.4f %8.6f %6.3f %5.3f')
             f_handle.close()
-
-            # remove any NaN values
-        #    phase = phase[~np.isnan(mag)]
-        #    err = err[~np.isnan(mag)]
-        #    mag = mag[~np.isnan(mag)]
 
             if filt == 'I1':
                 color='b'
@@ -671,80 +666,106 @@ def find_period(mag, error, mjd, initial_guess=0.5, num_investigate=5):
 
     return candidate_periods
 
-def period_search(V, initial_guess, name, plot_save=0, error_threshold=0.05):
+def period_search(first_band, best_period, name, second_band=None,
+    plot_save=0, error_threshold=0.1, search_window=0.0002, plot=0):
 
-    x = np.array(V[2][V[1] < error_threshold], dtype=float)
-    y = np.array(V[0][V[1] < error_threshold], dtype=float)
-    er = np.array(V[1][V[1] < error_threshold], dtype=float)
+    x = np.array(first_band[2][first_band[1] < error_threshold], dtype=float)
+    y = np.array(first_band[0][first_band[1] < error_threshold], dtype=float)
+    er = np.array(first_band[1][first_band[1] < error_threshold], dtype=float)
+    if second_band is not None:
+        x2 = np.array(second_band[2][second_band[1] < error_threshold], dtype=float)
+        y2 = np.array(second_band[0][second_band[1] < error_threshold], dtype=float)
+        er2 = np.array(second_band[1][second_band[1] < error_threshold], dtype=float)
 
-    best_period = initial_guess
-    fig, axs = mp.subplots(4, 1, figsize=(8,10))
+    # Calculate required precision
+    delta_time = np.max(x) - np.min(x)
+    approx_p = np.round(best_period, 1)
+    n_cycles = np.floor(delta_time/approx_p)
+    max_precision = n_cycles * approx_p / (n_cycles - 0.01) - approx_p
+    order = np.ceil(np.abs(np.log10(max_precision)))
+    precision = 10**order
 
-    search_range = 0.01
-    grid_num = 1000
+    grid_num = search_window*precision
 
-    for iteration in range(4):
-        best_std = 99
-        if iteration != 0:
-            search_range = search_range/(2*iteration)
-            grid_num = search_range*10**(iteration+5)
-        min_period = best_period - search_range/2
-        max_period = best_period + search_range/2
-        periods = np.linspace(min_period, max_period, num=grid_num+1)
-        avg_std = np.zeros(len(periods))
-        for ind, period in enumerate(periods):
-            phase = np.mod(x/period, 1)
-            stds, edges, bin_num = stats.binned_statistic(phase, y, statistic=np.std, bins=100)
-            avg_std[ind] = np.nanmean(stds)
-        order = np.argsort(avg_std)
-        best_period = periods[order[0]]
-        # Apply a median filter
-        yy_smoothed = signal.medfilt(avg_std, 101)
-        print iteration, search_range, grid_num, best_period
-        axs[iteration].plot(periods, avg_std, 'ro')
-        axs[iteration].plot(periods, yy_smoothed, 'b-')
-        axs[iteration].axvline(best_period)
-    axs[iteration].set_xlabel('Period (days)')
-    if plot_save == 1:
-        mp.savefig('lcvs/'+name+'-period.pdf')
-    if plot_save == 0:
+    if grid_num > 100000:
+        grid_num = 100000
+    min_period = best_period - search_window/2
+    max_period = best_period + search_window/2
+    periods = np.linspace(min_period, max_period, num=grid_num+1)
+    avg_std = np.zeros(len(periods))
+    for ind2, trial_period in enumerate(periods):
+        phase = np.mod(x/trial_period, 1)
+        stds, edges, bin_num = stats.binned_statistic(phase, y, statistic=np.std, bins=100)
+        counts, edges, bin_num = stats.binned_statistic(phase, y, statistic='count', bins=100)
+        if second_band is not None:
+            phase2 = np.mod(x2/trial_period, 1)
+            stds2, edges2, bin_num2 = stats.binned_statistic(phase2, y2, statistic=np.std, bins=100)
+            counts2, edges2, bin_num2 = stats.binned_statistic(phase2, y2, statistic='count', bins=100)
+            avg_std[ind2] = np.mean(stds2[counts2 > 3]) + np.mean(stds[counts > 3])
+        else:
+            avg_std[ind2] = np.mean(stds[counts > 3])
+    order = np.argsort(avg_std)
+    new_period = periods[order[0]]
+    best_std = avg_std[order[0]]
+    mp.plot(periods, avg_std, 'ro')
+    mp.axvline(new_period)
+
+    if plot != 0:
         mp.show()
     mp.close()
 
-    return best_period
+    return new_period
 
 # Use to do one round of LombScargle and identify possible periods for RRL star
-def period_search_LS(V, name, min_period = 0.2, max_period=1.0, plot_save=0, error_threshold=0.05):
+def period_search_LS(data, name, min_period = 0.2, max_period=1.0,
+                    error_threshold=0.05, verbose=0, plot_save=0, data_dir=''):
 
-    x1 = np.array(V[2][V[1] < error_threshold], dtype=float)
-    y1 = np.array(V[0][V[1] < error_threshold], dtype=float)
-    er1 = np.array(V[1][V[1] < error_threshold], dtype=float)
+    x1 = np.array(data[2][data[1] < error_threshold], dtype=float)
+    y1 = np.array(data[0][data[1] < error_threshold], dtype=float)
+    er1 = np.array(data[1][data[1] < error_threshold], dtype=float)
 
     freq_max = 1/(min_period)
     freq_min = 1/(max_period)
-#    frequency = np.linspace(freq_min, freq_max, 10000)
     frequency, power = LombScargle(x1, y1, er1).autopower(minimum_frequency=freq_min,
                         maximum_frequency=freq_max )
-    order = np.argsort(power)
-    candidate_periods = 1/frequency[order[-10:]]
-    mp.plot(1/frequency, power)
-#    for period in candidate_periods:
-#        mp.axvline(period, color='r', alpha=0.5)
 
-    if plot_save == 0:
-        mp.show()
-    mp.close()
+    # Calculate noise level
+    median_power = np.median(power)
 
+    # Find peaks
+    indices = peakutils.indexes(power, thres=0.5, min_dist=5000 )
+    candidate_periods = 1/frequency[indices]
     best_frequency = frequency[np.argmax(power)]
+    best_period = 1/best_frequency
+
+    fig = mp.figure(figsize=(12, 6))
+    ax1 = mp.subplot2grid((1,2), (0,0))
+    ax2 = mp.subplot2grid((1,2), (0,1))
+    ax1.plot(1/frequency, power)
+    ax1.plot(1/frequency[indices], power[indices], 'rx')
+    alias_freq = np.array([best_frequency+1, best_frequency-1, best_frequency+2, best_frequency-2])
+    alias_power = np.repeat(np.max(power), 4)
+    ax1.plot(1/alias_freq, alias_power, 'kx')
+    ax1.set_xlim(min_period, max_period)
+
+    # Calculate SNR of peaks
+    snr = power[indices]/median_power
+    if verbose == 1:
+        print candidate_periods
+        print snr
     t_fit = np.linspace(0,1)
-    y_fit = LombScargle(x1, y1, er1, nterms=2).model(t_fit, best_frequency)
+    y_fit = LombScargle(x1, y1, er1).model(t_fit, best_frequency)
 
     phase_data = np.mod(x1*best_frequency, 1)
-    mp.plot(phase_data, y1, 'o')
-    mp.plot(t_fit, y_fit)
-    mp.show()
+    ax2.plot(phase_data, y1, 'o')
+    ax2.set_ylim(np.max(y1)+0.05, np.min(y1)-0.05)
+    if plot_save == 0 :
+        mp.show()
+    if plot_save == 1:
+        mp.savefig(data_dir+'lcvs/optical/'+name+'-periodogram.pdf')
+    mp.close()
 #    return candidate_periods
-    return 1/best_frequency
+    return best_period
 
 def period_search_hybrid(first_band, initial_guess, name, second_band=None,
     plot_save=0, error_threshold=0.1, search_window=0.002,
