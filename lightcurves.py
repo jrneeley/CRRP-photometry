@@ -747,6 +747,9 @@ def period_search_LS(data, name, min_period = 0.2, max_period=1.0,
     alias_power = np.repeat(np.max(power), 4)
     ax1.plot(1/alias_freq, alias_power, 'kx')
     ax1.set_xlim(min_period, max_period)
+    ax1.set_xlabel('Period (days)')
+    ax1.set_ylabel('Power')
+
 
     # Calculate SNR of peaks
     snr = power[indices]/median_power
@@ -759,6 +762,8 @@ def period_search_LS(data, name, min_period = 0.2, max_period=1.0,
     phase_data = np.mod(x1*best_frequency, 1)
     ax2.plot(phase_data, y1, 'o')
     ax2.set_ylim(np.max(y1)+0.05, np.min(y1)-0.05)
+    ax2.set_xlabel('Phase')
+    ax2.set_ylabel('mag')
     if plot_save == 0 :
         mp.show()
     if plot_save == 1:
