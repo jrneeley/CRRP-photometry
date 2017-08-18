@@ -152,17 +152,51 @@ def candidate_variables(V, name, plot_save=0, error_threshold=0.05, min_period=0
     return candidate_periods
 
 
-# Calculate the Welch-Stetson variability index
-def welch_stetson_index(band1, band1_errs, band2, band2_errs):
+# Calculate the Welch-Stetson variability index for a single star
+def welch_stetson_indices(mags, errs, times, mags2=None, errs2=None, times2=None):
 
-    mean_band1 = sum(band1/band1_errs**2)/sum(1/band1_errs**2)
-    mean_band2 = sum(band2/band2_errs**2)/sum(1/band2_errs**2)
 
-    delta_band1 = (band1 - mean_band1)/band1_errs
-    delta_band2 = (band2 - mean_band2)/band2_errs
+    mean_mag = np.sum(mags/errs**2)/np.sum(1/errs**2)
+    N = len(mags)
+    res = (mags - mean_mag)/errs
+    K_index=0
+    #K_index = (1/N*np.sum(np.abs(res)))/np.sqrt(1/N*np.sum(res**2))
+    # Find observation pairs
+    order = np.argsort(times)
+    mags = mags[order]
+    errs = errs[order]
+    times = times[order]
+    delta_t = np.diff(times)
+    res1 = np.array([])
+    res2 = np.array([])
+    test = np.array([])
+    for ind, delt in enumerate(delta_t):
+        if delt < 0.5:
+            res1 = np.append(res1, (mags[ind] - mean_mag)/errs[ind])
+            res2 = np.append(res2, (mags[ind+1] - mean_mag)/errs[ind+1])
+            test = np.append(test, delt)
+    n_pairs = len(res1)
+    I_index = np.sqrt(1/(n_pairs*(n_pairs-1)))*np.sum(res1*res2)
 
-    N = len(band1)
-    ws_index = np.sqrt(1/(N*(N-1)))*sum(delta_band1 * delta_band2)
 
-    return ws_index
+
+    print np.sum(res1*res2)
+    print n_pairs
+
+    return I_index, K_index
+
+def robust_weighted_mean(mags, errs):
+
+    errs=errs.astype(float)
+    mags=mags.astype(float)
+    weights = 1/errs**2
+    mean_mag = np.average(mags, weights=weights)
+    residuals = (mags - mean_mag)/errs
+
+    for x in range(0,10):
+        old_mean = mean_mag
+        weights = weights*(1+(np.abs(residuals)/2)**2)**-1
+        mean_mag = np.average(mags, weights=weights)
+
+    return mean_mag
 # def calculate_variability_index():
