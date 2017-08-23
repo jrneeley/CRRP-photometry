@@ -155,12 +155,15 @@ def candidate_variables(V, name, plot_save=0, error_threshold=0.05, min_period=0
 # Calculate the Welch-Stetson variability index for a single star
 def welch_stetson_indices(mags, errs, times, mags2=None, errs2=None, times2=None):
 
+    mags = mags.astype(float)
+    errs = errs.astype(float)
+    times = times.astype(float)
 
     mean_mag = np.sum(mags/errs**2)/np.sum(1/errs**2)
-    N = len(mags)
+    N = float(len(mags))
     res = (mags - mean_mag)/errs
-    K_index=0
-    #K_index = (1/N*np.sum(np.abs(res)))/np.sqrt(1/N*np.sum(res**2))
+    #K_index=0
+    K_index = (1/N*np.sum(np.abs(res)))/np.sqrt(1/N*np.sum(res**2))
     # Find observation pairs
     order = np.argsort(times)
     mags = mags[order]
@@ -175,15 +178,10 @@ def welch_stetson_indices(mags, errs, times, mags2=None, errs2=None, times2=None
             res1 = np.append(res1, (mags[ind] - mean_mag)/errs[ind])
             res2 = np.append(res2, (mags[ind+1] - mean_mag)/errs[ind+1])
             test = np.append(test, delt)
-    n_pairs = len(res1)
+    n_pairs = float(len(res1))
     I_index = np.sqrt(1/(n_pairs*(n_pairs-1)))*np.sum(res1*res2)
 
-
-
-    print np.sum(res1*res2)
-    print n_pairs
-
-    return I_index, K_index
+    return K_index, I_index
 
 def robust_weighted_mean(mags, errs):
 
@@ -198,5 +196,7 @@ def robust_weighted_mean(mags, errs):
         weights = weights*(1+(np.abs(residuals)/2)**2)**-1
         mean_mag = np.average(mags, weights=weights)
 
-    return mean_mag
+    mean_mag_err = 1/np.sum(weights)
+    
+    return mean_mag, mean_mag_err
 # def calculate_variability_index():
