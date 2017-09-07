@@ -239,7 +239,7 @@ def phase_lcv(lcv_file, period, T0, bin=0, save=1, plot=0, error_threshold=0.3):
             mp.show()
     mp.gcf().clear()
 
-def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_lcv=0, bin_mir=0, data_dir=''):
+def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_lcv=0, bin_mir=0, data_dir='', old=0):
 
     fig = mp.figure(figsize=(8,10))
     path_to_optical = data_dir+'lcvs/optical/'
@@ -256,7 +256,7 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
     if optical_lcv == 1:
         phased_file = re.sub('\.lcv', '.phased', lcv)
 
-        U, B, V, R, I = read_optical_lcv(path_to_optical+target+lcv)
+        U, B, V, R, I = read_optical_lcv(path_to_optical+target+lcv, old=old)
 
 
         Uph = np.mod((U[2]-T0)/period, 1)
@@ -297,6 +297,34 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
             dtype=[('c1', 'S2'), ('c2', float), ('c3', float), ('c4', float),
             ('c5', float), ('c6', 'S30')])
         np.savetxt(f_handle, data_save, fmt='%s %10.4f %8.6f %6.3f %5.3f %s')
+
+    if nir_lcv == 1:
+        phased_file = re.sub('\.lcv', '.phased', lcv)
+
+        J, H, K = read_nir_lcv(path_to_nir+target+lcv, old=old)
+
+        Jph = np.mod((J[2]-T0)/period, 1)
+        Hph = np.mod((H[2]-T0)/period, 1)
+        Kph = np.mod((K[2]-T0)/period, 1)
+
+
+        ## Add to data to plot
+        mp.errorbar(Jph, J[0]-0.7, yerr=J[1], fmt='o')
+        mp.errorbar(Hph, H[0]-0.9, yerr=H[1], fmt='v')
+        mp.errorbar(Kph, K[0]-1.1, yerr=K[1], fmt='s')
+
+        data_save = np.array(zip(np.repeat('J', len(J[2])), J[2], Jph, J[0], J[1], J[3]),
+            dtype=[('c1', 'S2'), ('c2', float), ('c3', float), ('c4', float),
+            ('c5', float), ('c6', 'S30')])
+        np.savetxt(f_handle, data_save, fmt='%s %10.4f %8.6f %6.3f %5.3f %s')
+        data_save = np.array(zip(np.repeat('H', len(H[2])), H[2], Hph, H[0], H[1], H[3]),
+            dtype=[('c1', 'S2'), ('c2', float), ('c3', float), ('c4', float),
+            ('c5', float), ('c6', 'S30')])
+        np.savetxt(f_handle, data_save, fmt='%s %10.4f %8.6f %6.3f %5.3f %s')
+        data_save = np.array(zip(np.repeat('K', len(K[2])), K[2], Kph, K[0], K[1], K[3]),
+            dtype=[('c1', 'S2'), ('c2', float), ('c3', float), ('c4', float),
+            ('c5', float), ('c6', 'S30')])
+
 
     if mir_lcv == 1:
 
@@ -376,9 +404,9 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
 
             ## Add to data to plot
             if filt == 'I1':
-                offset = -1.0
+                offset = -4.0
             if filt == 'I2':
-                offset = -1.5
+                offset = -4.5
             mp.errorbar(phase, mag+offset, yerr=err, fmt='x')
             ## Add data to file
             data_save = np.array(zip(band, mjd, phase, mag, err, source),
@@ -386,7 +414,7 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
                 ('c5', float), ('c6', 'S30')])
             np.savetxt(f_handle, data_save, fmt='%2s %10.4f %8.6f %6.3f %5.3f %s')
 
-    mp.ylim((18,10))
+    mp.ylim((17,8))
     mp.xlabel('Phase')
     mp.ylabel('Mag + offset')
     mp.title(lcv)
@@ -512,6 +540,37 @@ def read_optical_lcv(lcv_file, old=0):
     U[3][:] = data['source'][data['filter'] == 5]
 
     return U, B, V, R, I
+
+def read_nir_lcv(lcv_file, old=0):
+
+    dtype1 = np.dtype([('mag', float), ('err', float), ('filter', int),
+        ('year', int), ('day', float), ('source', 'S35')])
+    if old == 1:
+        data = np.loadtxt(lcv_file, dtype=dtype1, usecols=(0,1,2,4,5,8))
+    if old == 0:
+        data = np.loadtxt(lcv_file, dtype=dtype1, usecols=(0,1,2,4,5,10))
+
+    J = np.zeros((4, len(data['filter'][data['filter'] == 1])), dtype=object)
+    J[0][:] = data['mag'][data['filter'] == 1]
+    J[1][:] = data['err'][data['filter'] == 1]
+    J[2][:] = data['year'][data['filter'] == 1]*1000 + data['day'][data['filter'] == 1]
+    J[2] = J[2] - 2400000.5
+    J[3][:] = data['source'][data['filter'] == 1]
+    H = np.zeros((4, len(data['filter'][data['filter'] == 2])), dtype=object)
+    H[0][:] = data['mag'][data['filter'] == 2]
+    H[1][:] = data['err'][data['filter'] == 2]
+    H[2][:] = data['year'][data['filter'] == 2]*1000 + data['day'][data['filter'] == 2]
+    H[2] = H[2] - 2400000.5
+    H[3][:] = data['source'][data['filter'] == 2]
+    K = np.zeros((4, len(data['filter'][data['filter'] == 3])), dtype=object)
+    K[0][:] = data['mag'][data['filter'] == 3]
+    K[1][:] = data['err'][data['filter'] == 3]
+    K[2][:] = data['year'][data['filter'] == 3]*1000 + data['day'][data['filter'] == 3]
+    K[2] = K[2] - 2400000.5
+    K[3][:] = data['source'][data['filter'] == 3]
+
+    return J, H, K
+
 def select_datasets(V, datasets):
 
     datasets_prefix = np.zeros(len(V[3]), dtype='S30')
