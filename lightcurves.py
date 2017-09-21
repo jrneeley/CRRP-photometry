@@ -404,17 +404,18 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
 
             ## Add to data to plot
             if filt == 'I1':
-                offset = -4.0
+                offset = -1.0
             if filt == 'I2':
-                offset = -4.5
+                offset = -1.5
             mp.errorbar(phase, mag+offset, yerr=err, fmt='x')
             ## Add data to file
             data_save = np.array(zip(band, mjd, phase, mag, err, source),
                 dtype=[('c1', 'S2'), ('c2', float), ('c3', float), ('c4', float),
                 ('c5', float), ('c6', 'S30')])
             np.savetxt(f_handle, data_save, fmt='%2s %10.4f %8.6f %6.3f %5.3f %s')
-
-    mp.ylim((17,8))
+    max_mag = np.mean(V[0])+3
+    min_mag = np.mean(V[0])-5
+    mp.ylim((max_mag, min_mag))
     mp.xlabel('Phase')
     mp.ylabel('Mag + offset')
     mp.title(lcv)
