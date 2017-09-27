@@ -212,10 +212,10 @@ def compile_datasets(target, old=0, returnColors=True):
 #    all_datasets = np.zeros(1, dtype='S30')
 #    all_jds = np.zeros(1, dtype=float)
     for lcv in lcvs:
-
+        
         U, B, V, R, I = lightcurves.read_optical_lcv(lcv, old=old)
         if lcv == lcvs[0]:
-            all_datasets = np.array(U[3], dtype='S30')
+            all_datasets = np.array(U[3], dtype='S35')
             all_jds = np.array(U[2], dtype=float)
         else:
             all_datasets = np.append(all_datasets, U[3])
@@ -245,7 +245,7 @@ def compile_datasets(target, old=0, returnColors=True):
         t_min.out_subfmt = 'date'
         t_max.out_subfmt = 'date'
         colors[ind] = plotting_utilities.get_color(ind)
-        print '%10s %6i %s %s %s' % (dataset, dataset_counts[ind], t_min.iso, t_max.iso, plotting_utilities.get_color(ind))
+        print '%3i %10s %6i %s %s %s' % (ind+1, dataset, dataset_counts[ind], t_min.iso, t_max.iso, plotting_utilities.get_color(ind))
 
     if returnColors == True:
         return dataset_names, colors

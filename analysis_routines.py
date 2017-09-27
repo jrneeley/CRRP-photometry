@@ -4,6 +4,8 @@ import variables
 import glob
 import read_dao
 import re
+import optical
+import coordinates
 from astropy.io import fits
 import progressbar
 from time import sleep
@@ -13,11 +15,14 @@ def make_mir_catalog(channels, target, dao_ids, data_dir=''):
 
     img_folder = data_dir+'data/'
     all_files = np.array([], dtype='S30')
-    for channel in channels:
-        temp = glob.glob(img_folder+'*.cal')
+    #for channel in channels:
+    temp = glob.glob(img_folder+'*.cal')
+
+    if len(temp) == 0:
+        all_files = np.append(all_files, glob.glob(img_folder+'*.alf'))
+    else:
         all_files = np.append(all_files, temp)
-        if len(temp) == 0:
-            all_files = np.append(all_files, glob.glob(img_folder+'*.alf'))
+
     master_data = np.zeros(len(dao_ids), dtype=[('filter', 'S2', len(all_files)),
         ('id', 'S10'), ('mjd', float, len(all_files)),
         ('psf_mag', float, len(all_files)), ('psf_err', float, len(all_files))])
@@ -57,7 +62,7 @@ def make_mir_catalog(channels, target, dao_ids, data_dir=''):
                     phot_data['psf_err'][ind2,ind] = float('NaN')
             bar.update(ind+1)
             sleep(0.1)
-        first_index = num_channel+prev_num
+        first_index = prev_num
         second_index = first_index + len(file_list)
         master_data['filter'][:,first_index:second_index] = phot_data['filter']
         master_data['id'] = phot_data['id']
@@ -96,10 +101,12 @@ def make_mir_catalog(channels, target, dao_ids, data_dir=''):
                 mean_err[ind] = np.nan
 
         mags_no_nan = all_mags[~np.isnan(all_mags)]
-        errs_no_nan = all_errs[~np.isnan(all_errs)]
+        errs_no_nan = all_errs[~np.isnan(all_mags)]
         times_no_nan = all_times[~np.isnan(all_mags)]
         if len(mags_no_nan) > 0:
-            kvar[ind], ivar[ind] = variables.welch_stetson_indices(mags_no_nan, errs_no_nan, times_no_nan)
+        #    kvar[ind], ivar[ind] = variables.welch_stetson_indices(mags_no_nan, errs_no_nan, times_no_nan)
+            kvar[ind] = 0.0
+            ivar[ind] = 0.0
         else:
             kvar[ind] = np.nan
             ivar[ind] = np.nan
@@ -141,3 +148,72 @@ def make_cmd_step2(dao_ids, phot_data, data_dir=''):
         dtype=[('c1', 'S8'), ('c2', float), ('c3', float), ('c4', float),
         ('c5', float)])
     np.savetxt(data_dir+'test.txt', data_save, fmt='%8s %10.4f %10.4f %6.3f %5.3f')
+
+def merge_catalogs(target, optical_dir, working_dir):
+
+    opt_data = optical.read_fnl(optical_dir, target)
+    dtype1 = np.dtype([('id', 'S8'), ('3.6', float), ('3.6err', float), ('4.5', float),
+    ('4.5err', float), ('n3.6', int), ('n4.5', int), ('var1', float), ('var2', float)])
+    print 'Reading MIR catalog for '+target+'...'
+    mir_data = np.loadtxt(working_dir+'/mir-catalog.txt', dtype=dtype1)
+
+    # change nan values to 9.999 and 99.999
+    mir_data['3.6'][mir_data['n3.6'] == 0] = 99.999
+    mir_data['3.6err'][mir_data['n3.6'] == 0] = 9.9999
+    mir_data['4.5'][mir_data['n4.5'] == 0] = 99.999
+    mir_data['4.5err'][mir_data['n4.5'] == 0] = 9.9999
+
+    # add header
+    head = ' 5 FILTERS:                 V             B             I             R             U           [3.6]         [4.5]           n    n    n    n    n    n    n    chi  sharp |---------- variability ----------|--- RA  (2000)  Dec ----'
+
+
+    dtype_comb = np.dtype([('id', int), ('x', float), ('y', float), ('V', float),
+        ('Ver', float), ('B', float), ('Ber', float), ('I', float), ('Ier', float),
+        ('R', float), ('Rer', float), ('U', float), ('Uer', float), ('3.6', float),
+        ('3.6er', float), ('4.5', float), ('4.5er', float), ('nV', int),
+        ('nB', int), ('nI', int), ('nR', int), ('nU', int), ('n3.6', int),
+        ('n4.5', int), ('chi', float), ('sharp', float), ('var1', float),
+        ('var2', float), ('var3', float), ('var4', float), ('var5', float),
+        ('ra_h', int), ('ra_m', int), ('ra_s', float),
+        ('dec_d', int), ('dec_m', int), ('dec_s', float)])
+
+    data_save = np.array(zip(opt_data['id'], opt_data['x'], opt_data['y'],
+        opt_data['V'], opt_data['Ver'], opt_data['B'], opt_data['Ber'],
+        opt_data['I'], opt_data['Ier'], opt_data['R'], opt_data['Rer'],
+        opt_data['U'], opt_data['Uer'], mir_data['3.6'], mir_data['3.6err'],
+        mir_data['4.5'], mir_data['4.5err'], opt_data['nV'], opt_data['nB'],
+        opt_data['nI'], opt_data['nR'], opt_data['nU'], mir_data['n3.6'],
+        mir_data['n4.5'], opt_data['chi'], opt_data['sharp'], opt_data['var1'],
+        opt_data['var2'], opt_data['var3'], opt_data['var4'], opt_data['var5'],
+        opt_data['ra_h'], opt_data['ra_m'], opt_data['ra_s'], opt_data['dec_d'],
+        opt_data['dec_m'], opt_data['dec_s']), dtype=dtype_comb)
+
+    np.savetxt(working_dir+'merged-catalog.txt', data_save,
+        fmt='%8i %8.2f %8.2f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %4i %4i %4i %4i %4i %4i %4i %6.3f %6.3f %6.3f %6.3f %6.3f %6.1f %6.3f %3i %02i %05.2f %+03i %02i %04.1f',
+        header=head)
+
+def read_merged_catalog(data_dir, center_ra, center_dec):
+
+    dtype_comb = np.dtype([('id', int), ('x', float), ('y', float), ('V', float),
+        ('Ver', float), ('B', float), ('Ber', float), ('I', float), ('Ier', float),
+        ('R', float), ('Rer', float), ('U', float), ('Uer', float), ('3.6', float),
+        ('3.6er', float), ('4.5', float), ('4.5er', float), ('nV', int),
+        ('nB', int), ('nI', int), ('nR', int), ('nU', int), ('n3.6', int),
+        ('n4.5', int), ('chi', float), ('sharp', float), ('var1', float),
+        ('var2', float), ('var3', float), ('var4', float), ('var5', float),
+        ('ra_h', int), ('ra_m', int), ('ra_s', float),
+        ('dec_d', int), ('dec_m', int), ('dec_s', float)])
+
+    data = np.loadtxt(data_dir+'/merged-catalog.txt', dtype=dtype_comb)
+
+    ra_h = data['ra_h']
+    ra_m = data['ra_m']
+    ra_s = data['ra_s']
+    dec_d = data['dec_d']
+    dec_m = data['dec_m']
+    dec_s = data['dec_s']
+
+    ra, dec = coordinates.hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s)
+    dist = coordinates.radial_dist(ra, dec, center_ra, center_dec)
+
+    return (data, dist)

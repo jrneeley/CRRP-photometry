@@ -21,6 +21,7 @@ def make_lcv(channels, stars, dao_ids, data_dir=''):
     for channel in channels:
         file_list = glob.glob(img_folder+channel+'*.cal')
         if len(file_list) == 0:
+            print 'Using uncalibrated files!'
             file_list = glob.glob(img_folder+channel+'*.alf')
         phot_data = np.zeros(len(dao_ids), dtype=[('filter', 'S2', len(file_list)),
             ('id', 'S8'), ('aor', int, len(file_list)), ('mjd', float, len(file_list)),
@@ -413,6 +414,7 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
                 dtype=[('c1', 'S2'), ('c2', float), ('c3', float), ('c4', float),
                 ('c5', float), ('c6', 'S30')])
             np.savetxt(f_handle, data_save, fmt='%2s %10.4f %8.6f %6.3f %5.3f %s')
+            
     max_mag = np.mean(V[0])+3
     min_mag = np.mean(V[0])-5
     mp.ylim((max_mag, min_mag))
@@ -968,6 +970,7 @@ def gloess(phased_lcv_file, clean=0, smoothing_params=None, plot_save=0, data_di
 
     if smoothing_params is None:
         smoothing_params = np.repeat(1.0, 10)
+        #smoothing_params = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.2, 0.2, 0.2, 0.2, 0.2])
 
     master_avg_mag = np.zeros(10)
     master_amp = np.zeros(10)
@@ -975,11 +978,11 @@ def gloess(phased_lcv_file, clean=0, smoothing_params=None, plot_save=0, data_di
 
     for filt in filters:
 
-        if filt == 'R' or filt == 'U':
-            master_avg_mag[master_filters == filt] = np.nan
-            master_amp[master_filters == filt] = np.nan
-            master_sigma[master_filters == filt] = np.nan
-            continue
+    #    if filt == 'R' or filt == 'U':
+    #        master_avg_mag[master_filters == filt] = np.nan
+    #        master_amp[master_filters == filt] = np.nan
+    #        master_sigma[master_filters == filt] = np.nan
+    #        continue
 
         sigma = float(smoothing_params[master_filters == filt])
 
@@ -1064,11 +1067,11 @@ def gloess(phased_lcv_file, clean=0, smoothing_params=None, plot_save=0, data_di
         if plot_save == 1:
 
             if filt == 'U':
-                offset = 0.8
+                offset = 1.0
                 marker = 'D'
                 color = 'xkcd:violet'
             if filt == 'B':
-                offset = 0.4
+                offset = 0.5
                 marker = 'v'
                 color = 'xkcd:indigo'
             if filt == 'V':
@@ -1076,23 +1079,23 @@ def gloess(phased_lcv_file, clean=0, smoothing_params=None, plot_save=0, data_di
                 marker = 'x'
                 color = 'b'
             if filt == 'R':
-                offset = -0.2
+                offset = -0.25
                 marker = 'd'
                 color = 'c'
             if filt == 'I':
-                offset = -0.4
+                offset = -0.5
                 marker = 's'
                 color = 'g'
             if filt == 'J':
-                offset = -0.6
+                offset = -0.7
                 marker = 'h'
                 color = 'xkcd:gold'
             if filt == 'H':
-                offset = -0.8
+                offset = -0.9
                 marker = '>'
                 color = 'xkcd:orange'
             if filt == 'K':
-                offset = -1
+                offset = -1.1
                 marker = '^'
                 color = 'r'
             if filt == 'I1':
@@ -1100,7 +1103,7 @@ def gloess(phased_lcv_file, clean=0, smoothing_params=None, plot_save=0, data_di
                 marker = 'o'
                 color = 'xkcd:maroon'
             if filt == 'I2':
-                offset = -1.6
+                offset = -1.5
                 marker = 'p'
                 color = 'm'
             ax.errorbar(phase, mag+offset, yerr=err, fmt=marker, color=color)
@@ -1114,10 +1117,12 @@ def gloess(phased_lcv_file, clean=0, smoothing_params=None, plot_save=0, data_di
     if plot_save == 1:
 
         ax.set_xlim((-0.2,1.2))
-        ax.set_ylim((18,9))
+        max_mag = np.mean(data['mag'][data['filter'] == 'V'])+3
+        min_mag = np.mean(data['mag'][data['filter'] == 'V'])-5
+        ax.set_ylim((max_mag, min_mag))
         ax.set_xlabel('Phase')
         ax.set_ylabel('Mag + offset')
-    #    ax.set_title(phased_lcv_file)
+        ax.set_title(phased_lcv_file)
         plot_file = re.sub('\.phased', '-fit.pdf', phased_lcv_file)
         figtosave.savefig(plot_file)
 
