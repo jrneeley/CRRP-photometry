@@ -14,7 +14,7 @@ def folder_setup():
 	opt_dir = raw_input("Enter path to OPT files: ")
 	return daophot_dir, optical_dir, opt_dir
 
-def spitzer_flux2dn(image, newname=""):
+def spitzer_flux2dn(image, newname="", exptime=None, fluxconv=None):
 
 	if (newname == ""):
 		newname = re.sub(".fits", "_dn.fits", image)
@@ -22,8 +22,8 @@ def spitzer_flux2dn(image, newname=""):
 	hdulist = fits.open(newname, mode='update')
 	prihdr = hdulist[0].header
 	scidata = hdulist[0].data
-	exptime = prihdr['exptime']
-	fluxconv = prihdr['fluxconv']
+	if exptime == None : exptime = prihdr['exptime']
+	if fluxconv == None : fluxconv = prihdr['fluxconv']
 	scidata *= exptime/fluxconv
 
 
