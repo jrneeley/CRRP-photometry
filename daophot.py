@@ -25,7 +25,7 @@ def init_phot(dao_dir, target, fitsfile):
 ## Running daophot
 
 	daophot = pexpect.spawn(dao_dir+'daophot')
-	#daophot.logfile = sys.stdout
+#	daophot.logfile = sys.stdout
 
 # attach the image
 	daophot.expect("Command:")
@@ -70,7 +70,7 @@ def find_psf(dao_dir, fitsfile):
 
 ## Clean up previous runs
 
-	extensions = ['.lst', '.psf', '.nei', '.als', 's.coo', 's.ap', '.srt', '.cmb', 's.fits', '.als']
+	extensions = ['.psf', '.nei']
 	for ext in extensions:
 		if (os.path.isfile(file_stem + ext)):
         		os.remove(file_stem + ext)
@@ -80,10 +80,10 @@ def find_psf(dao_dir, fitsfile):
 
 #Running daophot
 	daophot = pexpect.spawn(dao_dir+'daophot')
-#	daophot.logfile = sys.stdout
+	daophot.logfile = sys.stdout
 # attach the image
 	daophot.expect("Command:")
-	daophot.sendline("at " + image)
+	daophot.sendline("at " + file_stem)
 ## PSF
 	daophot.expect("Command:")
 	daophot.sendline("psf")
@@ -93,50 +93,30 @@ def find_psf(dao_dir, fitsfile):
 	daophot.sendline("")
 	daophot.expect("File for the PSF")
 	daophot.sendline("")
-	print "PSF complete"
 ## Exit Daophot
 	daophot.expect("Command:")
 	daophot.sendline("exit")
 	daophot.close(force=True)
+	print "PSF complete"
 
-def mosaic_phot(dao_dir, mosaic_fits):
+def deep_mosaic_phot(dao_dir, mosaic_fits):
 
-	temp=re.sub(".fits","", mosaic_fits)
+	file_stem=re.sub(".fits","", mosaic_fits)
 
 ## Clean up previous runs
-
-	extensions = ['.coo', '.psf', '.nei', '.ap', '.als', 's.coo',
-		's.ap', 's.fits', '.als']
-
+	extensions = ['.coo', '.psf', '.nei', '.ap', '.als']
 	for ext in extensions:
-		if (os.path.isfile(temp + ext)): os.remove(temp+ext)
+		if (os.path.isfile(file_stem + ext)): os.remove(file_stem + ext)
 
-	image = temp
+	image = file_stem
 
 	print "Working on " + image
-
 ## Running daophot
-
 	daophot = pexpect.spawn(dao_dir+'daophot')
 	#daophot.logfile = sys.stdout
-
 # attach the image
 	daophot.expect("Command:")
 	daophot.sendline("at " + image)
-# use options file for deep mosaic
-#	daophot.expect("Command:")
-#	daophot.sendline('opt')
-#	daophot.expect('KEYBOARD INPUT')
-#	daophot.sendline('')
-#	daophot.expect('OPT')
-#	daophot.sendline('fw=4')
-#	daophot.expect('OPT')
-#	daophot.sendline('fi=4')
-#	daophot.expect('OPT')
-#	daophot.sendline('ps=19')
-#	daophot.expect('OPT')
-#	daophot.sendline('')
-
 # find the stars
 	daophot.expect("Command:")
 	daophot.sendline("find")
@@ -191,7 +171,12 @@ def append(dao_dir, fitsfile):
 	orig_img = re.sub('.fits', '', fitsfile)
 	sub_img = re.sub('dn', 'dns', orig_img)
 
+	extensions = ['.cmb', '.srt']
+	for ext in extensions:
+		if (os.path.isfile(orig_img + ext)): os.remove(orig_img+ext)
+
 	daophot = pexpect.spawn(dao_dir+'daophot')
+#	daophot.logfile = sys.stdout
 	daophot.expect('Command:')
 	daophot.sendline('append')
 	daophot.expect('First input file')
@@ -203,7 +188,7 @@ def append(dao_dir, fitsfile):
 	daophot.expect('Command:')
 	daophot.sendline('sort')
 	daophot.expect('Which do you want')
-	daophot.sendline(3)
+	daophot.sendline('3')
 	daophot.expect('Input file name')
 	daophot.sendline(orig_img+'.cmb')
 	daophot.expect('Output file name')
@@ -212,9 +197,12 @@ def append(dao_dir, fitsfile):
 	daophot.sendline('y')
 	daophot.expect('Command:')
 
-def mosaic_phot2(dao_dir, mosaic_dn):
+def deep_mosaic_phot2(dao_dir, mosaic_dn):
 
 	file_stem = re.sub('.fits', '', mosaic_dn)
+	extensions = ['.ap']
+	for ext in extensions:
+		if (os.path.isfile(file_stem + ext)): os.rename(file_stem+ext, file_stem + '_old.ap')
 
 	print "Working on " + file_stem
 
@@ -237,7 +225,7 @@ def mosaic_phot2(dao_dir, mosaic_dn):
 	daophot.expect("Input position file")
 	daophot.sendline(file_stem + '.srt')
 	daophot.expect("Output file")
-	daophot.sendline(image + '.ap')
+	daophot.sendline(file_stem + '.ap')
 
 ## Exit Daophot
 	daophot.expect("Command:")

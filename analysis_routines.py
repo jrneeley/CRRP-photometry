@@ -119,39 +119,14 @@ def make_mir_catalog(channels, target, dao_ids, data_dir=''):
     np.savetxt(data_dir+'mir-catalog.txt', data_save,
         fmt='%8s %6.3f %5.3f %6.3f %5.3f %4i %4i %5.3f %7.2f')
 
-def make_cmd_step2(dao_ids, phot_data, data_dir=''):
 
-    x_new = np.zeros(len(dao_ids))
-    y_new = np.zeros(len(dao_ids))
-    mean_mag = np.zeros(len(dao_ids))
-    mean_std = np.zeros(len(dao_ids))
+def merge_catalogs(target, optical_dir, working_dir, cluster_coord=None):
 
-    for ind, star in enumerate(dao_ids):
+    if cluster_coord == None: opt_data = optical.read_fnl(optical_dir, target)
+    else:
+        opt_data, rad_dist = optical.read_fnl_w_radial_dist(optical_dir, target,
+            cluster_coord[0], cluster_coord_[1])
 
-        x_new[ind] = np.mean(phot_data['x'][ind])
-        y_new[ind] = np.mean(phot_data['y'][ind])
-
-        all_mags = phot_data['psf_mag'][ind]
-        all_errs = phot_data['psf_err'][ind]
-
-        good_mags = all_mags[~np.isnan(all_mags)]
-        good_errs = all_errs[~np.isnan(all_mags)]
-        N = len(good_mags)
-        if N > 0:
-            mean_mag[ind] = variables.robust_weighted_mean(good_mags, good_errs)
-            mean_std[ind] = np.std(all_mags[~np.isnan(all_mags)])
-        else:
-            mean_mag[ind] = np.nan
-            mean_std[ind] = np.nan
-
-    data_save = np.array(zip(dao_ids, x_new, y_new, mean_mag, mean_std),
-        dtype=[('c1', 'S8'), ('c2', float), ('c3', float), ('c4', float),
-        ('c5', float)])
-    np.savetxt(data_dir+'test.txt', data_save, fmt='%8s %10.4f %10.4f %6.3f %5.3f')
-
-def merge_catalogs(target, optical_dir, working_dir):
-
-    opt_data = optical.read_fnl(optical_dir, target)
     dtype1 = np.dtype([('id', 'S8'), ('3.6', float), ('3.6err', float), ('4.5', float),
     ('4.5err', float), ('n3.6', int), ('n4.5', int), ('var1', float), ('var2', float)])
     print 'Reading MIR catalog for '+target+'...'
@@ -176,23 +151,80 @@ def merge_catalogs(target, optical_dir, working_dir):
         ('var2', float), ('var3', float), ('var4', float), ('var5', float),
         ('ra_h', int), ('ra_m', int), ('ra_s', float),
         ('dec_d', int), ('dec_m', int), ('dec_s', float)])
+    dtype_comb2 = np.dtype([('id', int), ('x', float), ('y', float), ('V', float),
+        ('Ver', float), ('B', float), ('Ber', float), ('I', float), ('Ier', float),
+        ('R', float), ('Rer', float), ('U', float), ('Uer', float), ('3.6', float),
+        ('3.6er', float), ('4.5', float), ('4.5er', float), ('nV', int),
+        ('nB', int), ('nI', int), ('nR', int), ('nU', int), ('n3.6', int),
+        ('n4.5', int), ('chi', float), ('sharp', float), ('var1', float),
+        ('var2', float), ('var3', float), ('var4', float), ('var5', float),
+        ('ra_h', int), ('ra_m', int), ('ra_s', float),
+        ('dec_d', int), ('dec_m', int), ('dec_s', float), ('rad_dist', float)])
 
-    data_save = np.array(zip(opt_data['id'], opt_data['x'], opt_data['y'],
-        opt_data['V'], opt_data['Ver'], opt_data['B'], opt_data['Ber'],
-        opt_data['I'], opt_data['Ier'], opt_data['R'], opt_data['Rer'],
-        opt_data['U'], opt_data['Uer'], mir_data['3.6'], mir_data['3.6err'],
-        mir_data['4.5'], mir_data['4.5err'], opt_data['nV'], opt_data['nB'],
-        opt_data['nI'], opt_data['nR'], opt_data['nU'], mir_data['n3.6'],
-        mir_data['n4.5'], opt_data['chi'], opt_data['sharp'], opt_data['var1'],
-        opt_data['var2'], opt_data['var3'], opt_data['var4'], opt_data['var5'],
-        opt_data['ra_h'], opt_data['ra_m'], opt_data['ra_s'], opt_data['dec_d'],
-        opt_data['dec_m'], opt_data['dec_s']), dtype=dtype_comb)
+    if cluster_coord == None:
+        data_save = np.array(zip(opt_data['id'], opt_data['x'], opt_data['y'],
+            opt_data['V'], opt_data['Ver'], opt_data['B'], opt_data['Ber'],
+            opt_data['I'], opt_data['Ier'], opt_data['R'], opt_data['Rer'],
+            opt_data['U'], opt_data['Uer'], mir_data['3.6'], mir_data['3.6err'],
+            mir_data['4.5'], mir_data['4.5err'], opt_data['nV'], opt_data['nB'],
+            opt_data['nI'], opt_data['nR'], opt_data['nU'], mir_data['n3.6'],
+            mir_data['n4.5'], opt_data['chi'], opt_data['sharp'], opt_data['var1'],
+            opt_data['var2'], opt_data['var3'], opt_data['var4'], opt_data['var5'],
+            opt_data['ra_h'], opt_data['ra_m'], opt_data['ra_s'], opt_data['dec_d'],
+            opt_data['dec_m'], opt_data['dec_s']), dtype=dtype_comb)
+    else:
+        data_save = np.array(zip(opt_data['id'], opt_data['x'], opt_data['y'],
+            opt_data['V'], opt_data['Ver'], opt_data['B'], opt_data['Ber'],
+            opt_data['I'], opt_data['Ier'], opt_data['R'], opt_data['Rer'],
+            opt_data['U'], opt_data['Uer'], mir_data['3.6'], mir_data['3.6err'],
+            mir_data['4.5'], mir_data['4.5err'], opt_data['nV'], opt_data['nB'],
+            opt_data['nI'], opt_data['nR'], opt_data['nU'], mir_data['n3.6'],
+            mir_data['n4.5'], opt_data['chi'], opt_data['sharp'], opt_data['var1'],
+            opt_data['var2'], opt_data['var3'], opt_data['var4'], opt_data['var5'],
+            opt_data['ra_h'], opt_data['ra_m'], opt_data['ra_s'], opt_data['dec_d'],
+            opt_data['dec_m'], opt_data['dec_s'], rad_dist), dtype=dtype_comb2)
 
     np.savetxt(working_dir+'merged-catalog.txt', data_save,
         fmt='%8i %8.2f %8.2f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %4i %4i %4i %4i %4i %4i %4i %6.3f %6.3f %6.3f %6.3f %6.3f %6.1f %6.3f %3i %02i %05.2f %+03i %02i %04.1f',
         header=head)
 
-def read_merged_catalog(data_dir, center_ra, center_dec):
+def merge_opt_deep_catalogs(target, optical_dir, working_dir, cluster_coord=None):
+
+    if cluster_coord == None: opt_data = optical.read_fnl(optical_dir, target)
+    else:
+        opt_data, rad_dist = optical.read_fnl_w_radial_dist(optical_dir, target,
+            cluster_coord[0], cluster_coord[1])
+
+    dtype1 = np.dtype([('id', int), ('3.6', float), ('3.6err', float)])
+    dtype2 = np.dtype([('id', int), ('4.5', float), ('4.5err', float)])
+    print 'Reading MIR catalog for '+target+'...'
+    data3p6 = np.loadtxt(working_dir+'/DeepMosaic/'+target+'_I1_deep_dn.alf', dtype=dtype1, usecols=(0,3,4), skiprows=3)
+    data4p5 = np.loadtxt(working_dir+'/DeepMosaic/'+target+'_I2_deep_dn.alf', dtype=dtype2, usecols=(0,3,4), skiprows=3)
+
+    mir_data = np.zeros(len(opt_data['id']), dtype=([('3.6', float), ('3.6err', float),
+        ('4.5', float), ('4.5err', float), ('n3.6', int), ('n4.5', int)]))
+
+    mir_data['n3.6'][:] = 1
+    mir_data['n4.5'][:] = 1
+    for ind, star in enumerate(opt_data['id']):
+        match3p6 = np.argwhere(data3p6['id'] == star)
+        match4p5 = np.argwhere(data4p5['id'] == star)
+        if len(match3p6) > 0:
+            mir_data['3.6'][ind] = data3p6['3.6'][data3p6['id'] == star]
+            mir_data['3.6err'][ind] = data3p6['3.6err'][data3p6['id'] == star]
+        else:
+            mir_data['3.6'][ind] = 99.999
+            mir_data['3.6err'][ind] = 9.9999
+        if len(match4p5) > 0:
+            mir_data['4.5'][ind] = data4p5['4.5'][data4p5['id'] == star]
+            mir_data['4.5err'][ind] = data4p5['4.5err'][data4p5['id'] == star]
+        else:
+            mir_data['4.5'][ind] = 99.999
+            mir_data['4.5err'][ind] = 9.9999
+
+    # add header
+    head = ' 5 FILTERS:                 V             B             I             R             U           [3.6]         [4.5]           n    n    n    n    n    n    n    chi  sharp |---------- variability ----------|--- RA  (2000)  Dec ----'
+
 
     dtype_comb = np.dtype([('id', int), ('x', float), ('y', float), ('V', float),
         ('Ver', float), ('B', float), ('Ber', float), ('I', float), ('Ier', float),
@@ -203,17 +235,70 @@ def read_merged_catalog(data_dir, center_ra, center_dec):
         ('var2', float), ('var3', float), ('var4', float), ('var5', float),
         ('ra_h', int), ('ra_m', int), ('ra_s', float),
         ('dec_d', int), ('dec_m', int), ('dec_s', float)])
+    dtype_comb2 = np.dtype([('id', int), ('x', float), ('y', float), ('V', float),
+        ('Ver', float), ('B', float), ('Ber', float), ('I', float), ('Ier', float),
+        ('R', float), ('Rer', float), ('U', float), ('Uer', float), ('3.6', float),
+        ('3.6er', float), ('4.5', float), ('4.5er', float), ('nV', int),
+        ('nB', int), ('nI', int), ('nR', int), ('nU', int), ('n3.6', int),
+        ('n4.5', int), ('chi', float), ('sharp', float), ('var1', float),
+        ('var2', float), ('var3', float), ('var4', float), ('var5', float),
+        ('ra_h', int), ('ra_m', int), ('ra_s', float),
+        ('dec_d', int), ('dec_m', int), ('dec_s', float), ('rad_dist', float)])
 
-    data = np.loadtxt(data_dir+'/merged-catalog.txt', dtype=dtype_comb)
+    if cluster_coord == None:
+        data_save = np.array(zip(opt_data['id'], opt_data['x'], opt_data['y'],
+            opt_data['V'], opt_data['Ver'], opt_data['B'], opt_data['Ber'],
+            opt_data['I'], opt_data['Ier'], opt_data['R'], opt_data['Rer'],
+            opt_data['U'], opt_data['Uer'], mir_data['3.6'], mir_data['3.6err'],
+            mir_data['4.5'], mir_data['4.5err'], opt_data['nV'], opt_data['nB'],
+            opt_data['nI'], opt_data['nR'], opt_data['nU'], mir_data['n3.6'],
+            mir_data['n4.5'], opt_data['chi'], opt_data['sharp'], opt_data['var1'],
+            opt_data['var2'], opt_data['var3'], opt_data['var4'], opt_data['var5'],
+            opt_data['ra_h'], opt_data['ra_m'], opt_data['ra_s'], opt_data['dec_d'],
+            opt_data['dec_m'], opt_data['dec_s']), dtype=dtype_comb)
 
-    ra_h = data['ra_h']
-    ra_m = data['ra_m']
-    ra_s = data['ra_s']
-    dec_d = data['dec_d']
-    dec_m = data['dec_m']
-    dec_s = data['dec_s']
+        np.savetxt(working_dir+'merged-deep-catalog.txt', data_save,
+            fmt='%8i %8.2f %8.2f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %4i %4i %4i %4i %4i %4i %4i %6.3f %6.3f %6.3f %6.3f %6.3f %6.1f %6.3f %3i %02i %05.2f %+03i %02i %04.1f',
+            header=head)
+    else:
+        data_save = np.array(zip(opt_data['id'], opt_data['x'], opt_data['y'],
+            opt_data['V'], opt_data['Ver'], opt_data['B'], opt_data['Ber'],
+            opt_data['I'], opt_data['Ier'], opt_data['R'], opt_data['Rer'],
+            opt_data['U'], opt_data['Uer'], mir_data['3.6'], mir_data['3.6err'],
+            mir_data['4.5'], mir_data['4.5err'], opt_data['nV'], opt_data['nB'],
+            opt_data['nI'], opt_data['nR'], opt_data['nU'], mir_data['n3.6'],
+            mir_data['n4.5'], opt_data['chi'], opt_data['sharp'], opt_data['var1'],
+            opt_data['var2'], opt_data['var3'], opt_data['var4'], opt_data['var5'],
+            opt_data['ra_h'], opt_data['ra_m'], opt_data['ra_s'], opt_data['dec_d'],
+            opt_data['dec_m'], opt_data['dec_s'], rad_dist), dtype=dtype_comb2)
 
-    ra, dec = coordinates.hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s)
-    dist = coordinates.radial_dist(ra, dec, center_ra, center_dec)
+        np.savetxt(working_dir+'merged-deep-catalog.txt', data_save,
+            fmt='%8i %8.2f %8.2f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %6.3f %6.4f %4i %4i %4i %4i %4i %4i %4i %6.3f %6.3f %6.3f %6.3f %6.3f %6.1f %6.3f %3i %02i %05.2f %+03i %02i %04.1f %0.2f',
+            header=head)
 
-    return (data, dist)
+
+def read_merged_catalog(data_dir):#, center_ra, center_dec):
+
+    dtype_comb = np.dtype([('id', int), ('x', float), ('y', float), ('V', float),
+        ('Ver', float), ('B', float), ('Ber', float), ('I', float), ('Ier', float),
+        ('R', float), ('Rer', float), ('U', float), ('Uer', float), ('3.6', float),
+        ('3.6er', float), ('4.5', float), ('4.5er', float), ('nV', int),
+        ('nB', int), ('nI', int), ('nR', int), ('nU', int), ('n3.6', int),
+        ('n4.5', int), ('chi', float), ('sharp', float), ('var1', float),
+        ('var2', float), ('var3', float), ('var4', float), ('var5', float),
+        ('ra_h', int), ('ra_m', int), ('ra_s', float),
+        ('dec_d', int), ('dec_m', int), ('dec_s', float), ('rad_dist', float)])
+
+    data = np.loadtxt(data_dir+'/merged-deep-catalog.txt', dtype=dtype_comb)
+
+#    ra_h = data['ra_h']
+#    ra_m = data['ra_m']
+#    ra_s = data['ra_s']
+#    dec_d = data['dec_d']
+#    dec_m = data['dec_m']
+#    dec_s = data['dec_s']
+
+#    ra, dec = coordinates.hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s)
+#    dist = coordinates.radial_dist(ra, dec, center_ra, center_dec)
+
+    return data

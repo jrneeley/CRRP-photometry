@@ -70,32 +70,32 @@ def daomatch_mosaic(dao_dir, channel, target, image_list):
     daomatch.expect("Good bye")
     daomatch.close()
 
-def deep_mosaic(dao_dir, channel, target, bcd_list):
+def deep_mosaic(dao_dir, mosaic, target, bcd_list):
 
 ## Clean up previous runs
 
-    mosaic = target+'_'+channel+'_deep_dn.fits'
-    first_file = re.sub('.fits', '.als', mosaic)
+#    mosaic = target+'_'+channel+'_deep_dn.fits'
+    first_file = re.sub('.fits', '_dn.als', mosaic)
     for bcd in bcd_list:
         extensions = ['.mch']
         for ext in extensions:
-            if (os.path.isfile('temp'+ext)):
-                os.remove('temp'+ext)
+            if (os.path.isfile('temp'+ext)): os.remove('temp'+ext)
         next_bcd = re.sub("data/", target+":", bcd)
         next_bcd = re.sub('.fits', '.als', next_bcd)
-        xmin, xmax, ymin, ymax = coordinates.find_deep_mos_coords(mosaic, bcd)
+        bcd2 = re.sub('data/', '../data/', bcd)
+        xmin, xmax, ymin, ymax = coordinates.find_deep_mos_coords(mosaic, bcd2)
         limits = '{:.2f}, {:.2f}, {:.2f}, {:.2f}'.format(xmin, xmax, ymin, ymax)
         ## run DAOMATCH on this file
         daomatch = pexpect.spawn(dao_dir+'daomatch')
-    #    daomatch.logfile = sys.stdout
+#        daomatch.logfile = sys.stdout
         daomatch.expect("Master input file")
         daomatch.sendline(first_file+'*')
-        daomatch.expect('Ymin, Ymax:')
+        daomatch.expect('Ymin, Ymax')
         daomatch.sendline(limits)
         daomatch.expect("Output file")
         daomatch.sendline('temp.mch')
         check = daomatch.expect(["Next input file", "Write this transformation"])
-        if check == 0: daomatch.sendline(next_bcd+'!') # / forces scale to be 1
+        if check == 0: daomatch.sendline(next_bcd+'!') # ! turns off x,y prompts
         if check == 1: daomatch.sendline('y')
         daomatch.expect("Next input file")
         daomatch.sendline("")

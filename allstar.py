@@ -85,16 +85,15 @@ def allstar_deep(dao_dir, fitsfile):
 
 ## Clean up previous runs
 
-        extensions = ['.als', 's.coo']
+        extensions = ['.als', 's.fits']
         for ext in extensions:
                 if (os.path.isfile(file_stem + ext)):
                         os.remove(file_stem + ext)
-
     #    print "Working on " + image
 
 ## Running ALLSTAR
-	allstar = pexpect.spawn(dao_dir+'allstar')
-	#allstar.logfile = sys.stdout
+	allstar = pexpect.spawn(dao_dir+'allstar', timeout=240)
+	allstar.logfile = sys.stdout
 
 	allstar.expect("OPT")
 	allstar.sendline("")

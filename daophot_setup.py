@@ -54,7 +54,7 @@ def set_opt_files_mosaic(opt_dir, channel, exptime, warm=1):
 	if (channel == 'I2'):
 		optfile = opt_dir2+'ch2-'+str(exptime)+'s-mosaic.opt'
 	shutil.copy(optfile, 'daophot.opt')
-	shutil.copy(opt_dir+'photo.opt', 'photo.opt')
+	shutil.copy(opt_dir+'photo-mosaic.opt', 'photo.opt')
 	shutil.copy(opt_dir+'allstar-mosaic.opt', 'allstar.opt')
 	shutil.copy(opt_dir+'allframe.opt', 'allframe.opt')
 

@@ -154,9 +154,7 @@ def find_deep_mos_coords(deep_mosaic, bcd):
     pixcord = np.array([[0,0], [0,255], [255, 0], [255, 255]], np.float_)
     w1 = WCS(bcd)
     world = w1.wcs_pix2world(pixcord, 0)
-#    world2 = w.wcs_pix2world(0, 255, 0)
-#    world3 = w.wcs_pix2world(255, 0, 0)
-#    world4 = w.wcs_pix2world(255, 255, 0)
+#    print world
 
     w2 = WCS(deep_mosaic)
     pixnew = w2.wcs_world2pix(world, 0)

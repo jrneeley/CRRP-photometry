@@ -414,7 +414,7 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
                 dtype=[('c1', 'S2'), ('c2', float), ('c3', float), ('c4', float),
                 ('c5', float), ('c6', 'S30')])
             np.savetxt(f_handle, data_save, fmt='%2s %10.4f %8.6f %6.3f %5.3f %s')
-            
+
     max_mag = np.mean(V[0])+3
     min_mag = np.mean(V[0])-5
     mp.ylim((max_mag, min_mag))
@@ -728,7 +728,7 @@ def find_period(mag, error, mjd, initial_guess=0.5, num_investigate=5):
 
     return candidate_periods
 
-def period_search(first_band, best_period, name, second_band=None,
+def period_search(first_band, best_period, second_band=None,
     plot_save=0, error_threshold=0.1, search_window=0.0002, plot=0):
 
     x = np.array(first_band[2][first_band[1] < error_threshold], dtype=float)
@@ -746,6 +746,7 @@ def period_search(first_band, best_period, name, second_band=None,
     max_precision = n_cycles * approx_p / (n_cycles - 0.01) - approx_p
     order = np.ceil(np.abs(np.log10(max_precision)))
     precision = 10**order
+    best_period = np.round(best_period, decimals=int(order))
 
     grid_num = search_window*precision
 
@@ -815,6 +816,7 @@ def period_search_LS(data, name, min_period = 0.2, max_period=1.0,
 
     # Calculate SNR of peaks
     snr = power[indices]/median_power
+    snr_best = power[np.argmax(power)]/median_power
     if verbose == 1:
         print candidate_periods
         print snr
@@ -832,7 +834,7 @@ def period_search_LS(data, name, min_period = 0.2, max_period=1.0,
         mp.savefig(data_dir+'lcvs/optical/'+name+'-periodogram.pdf')
     mp.close()
 #    return candidate_periods
-    return best_period
+    return best_period, snr_best
 
 def period_search_hybrid(first_band, initial_guess, name, second_band=None,
     plot_save=0, error_threshold=0.1, search_window=0.002,
