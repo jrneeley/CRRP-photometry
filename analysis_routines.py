@@ -198,8 +198,10 @@ def merge_opt_deep_catalogs(target, optical_dir, working_dir, cluster_coord=None
     dtype1 = np.dtype([('id', int), ('3.6', float), ('3.6err', float)])
     dtype2 = np.dtype([('id', int), ('4.5', float), ('4.5err', float)])
     print 'Reading MIR catalog for '+target+'...'
-    data3p6 = np.loadtxt(working_dir+'/DeepMosaic/'+target+'_I1_deep_dn.alf', dtype=dtype1, usecols=(0,3,4), skiprows=3)
-    data4p5 = np.loadtxt(working_dir+'/DeepMosaic/'+target+'_I2_deep_dn.alf', dtype=dtype2, usecols=(0,3,4), skiprows=3)
+    data3p6 = np.loadtxt(working_dir+'/DeepMosaic/'+target+'_I1_deep_dn.cal', dtype=dtype1, usecols=(0,3,4), skiprows=3)
+    data4p5 = np.loadtxt(working_dir+'/DeepMosaic/'+target+'_I2_deep_dn.cal', dtype=dtype2, usecols=(0,3,4), skiprows=3)    
+#    data3p6 = np.loadtxt(working_dir+'/DeepMosaic/'+target+'_I1_deep_dn.alf', dtype=dtype1, usecols=(0,3,4), skiprows=3)
+#    data4p5 = np.loadtxt(working_dir+'/DeepMosaic/'+target+'_I2_deep_dn.alf', dtype=dtype2, usecols=(0,3,4), skiprows=3)
 
     mir_data = np.zeros(len(opt_data['id']), dtype=([('3.6', float), ('3.6err', float),
         ('4.5', float), ('4.5err', float), ('n3.6', int), ('n4.5', int)]))

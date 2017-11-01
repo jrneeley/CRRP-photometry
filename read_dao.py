@@ -26,6 +26,18 @@ def read_raw(raw_file):
 
     return star_ids, mags_all
 
+def read_ap(ap_file):
+
+    dtype = np.dtype([('id', float), ('x', float), ('y', float), ('mag', float)])
+    data = np.loadtxt(ap_file, dtype=dtype, skiprows=3)
+
+    ids = data['id'][0::2].astype(int)
+    x = data['x'][0::2]
+    y = data['y'][0::2]
+    mags = data['mag'][0::2]
+    err = data['mag'][1::2]
+    return ids, mags, err
+
 def read_mag(mag_file):
 
     dtype1 = np.dtype([('id', int), ('x', float), ('y', float), ('mag', float),
@@ -76,7 +88,7 @@ def read_lst(lst_file):
     dtype1 = np.dtype([('id', int), ('x', float), ('y', float)])
     data = np.loadtxt(lst_file, dtype = dtype1, usecols=(0,1,2), skiprows=3)
 
-    ids = data['ids']
+    ids = data['id']
     x = data['x']
     y = data['y']
 
@@ -96,3 +108,11 @@ def read_alf(alf_file):
 
 
     return ids, x, y, mag, err
+
+def read_coo_new(coo_file):
+
+    dtype1 = np.dtype([('id', int), ('x', float), ('y', float), ('mag1', float),
+        ('err', float), ('mag2', float)])
+    data = np.loadtxt(coo_file, dtype=dtype1, usecols=(0,1,2,3,4,5), skiprows=3)
+
+    return data
