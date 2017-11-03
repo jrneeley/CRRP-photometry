@@ -8,7 +8,7 @@ import shutil
 from astropy.io import fits
 import sys
 
-def init_phot(dao_dir, target, fitsfile):
+def init_phot(dao_dir, target, fitsfile, mosaics=0):
 
 	temp=re.sub(".fits","", fitsfile)
 
@@ -18,8 +18,8 @@ def init_phot(dao_dir, target, fitsfile):
     	for ext in extensions:
     		if (os.path.isfile(temp + ext)):
         		os.remove(temp+ext)
-	image = re.sub("data/",target+":", temp)
-
+	if mosaics == 0: image = re.sub('data/',target+':', temp)
+	if mosaics == 1: image = re.sub('mosaics/', target+'m:', temp)
 #	print "Working on " + image
 
 ## Running daophot

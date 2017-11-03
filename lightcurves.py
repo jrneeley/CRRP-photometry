@@ -260,6 +260,13 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
         nir_lcv = 1
     if os.path.isfile(path_to_mir+lcv):
         mir_lcv = 1
+    master_filters = np.array(['U', 'B', 'V', 'R', 'I', 'J', 'H', 'K',
+        'I1', 'I2'], dtype='S2')
+    master_markers = np.array(['P', 'v', 'D', '>', 'x', 'p', 'd', '^', 'o', 's'])
+    master_offset = np.array([1.0, 0.5, 0.0, -0.25, -0.5, -0.7, -0.9, -1.1, -1.0, -1.5 ])
+    master_colors = np.array(['xkcd:violet', 'xkcd:periwinkle', 'xkcd:sapphire',
+        'xkcd:sky blue', 'xkcd:emerald', 'xkcd:avocado', 'xkcd:goldenrod',
+        'xkcd:orange', 'xkcd:pink', 'xkcd:scarlet'])
 
     if optical_lcv == 1:
         phased_file = re.sub('\.lcv', '.phased', lcv)
@@ -274,11 +281,11 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
         Iph = np.mod((I[2]-T0)/period, 1)
 
         ## Add to data to plot
-        mp.errorbar(Uph, U[0]+1, yerr=U[1], fmt='o')
-        mp.errorbar(Bph, B[0]+0.5, yerr=B[1], fmt='v')
-        mp.errorbar(Vph, V[0], yerr=V[1], fmt='s')
-        mp.errorbar(Rph, R[0]-0.25, yerr=R[1], fmt='p')
-        mp.errorbar(Iph, I[0]-0.5, yerr=I[1], fmt='P')
+        mp.errorbar(Uph, U[0]+master_offset[0], yerr=U[1], fmt=master_markers[0], color=master_colors[0])
+        mp.errorbar(Bph, B[0]+master_offset[1], yerr=B[1], fmt=master_markers[1], color=master_colors[1])
+        mp.errorbar(Vph, V[0]+master_offset[2], yerr=V[1], fmt=master_markers[2], color=master_colors[2])
+        mp.errorbar(Rph, R[0]+master_offset[3], yerr=R[1], fmt=master_markers[3], color=master_colors[3])
+        mp.errorbar(Iph, I[0]+master_offset[4], yerr=I[1], fmt=master_markers[4], color=master_colors[4])
 
         ## Add data to file
         f_handle = open(data_dir+'lcvs/'+phased_file, 'w')
@@ -317,9 +324,9 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
 
 
         ## Add to data to plot
-        mp.errorbar(Jph, J[0]-0.7, yerr=J[1], fmt='o')
-        mp.errorbar(Hph, H[0]-0.9, yerr=H[1], fmt='v')
-        mp.errorbar(Kph, K[0]-1.1, yerr=K[1], fmt='s')
+        mp.errorbar(Jph, J[0]-master_offset[5], yerr=J[1], fmt=master_markers[5], color=master_colors[5])
+        mp.errorbar(Hph, H[0]-master_offset[6], yerr=H[1], fmt=master_markers[6], color=master_colors[6])
+        mp.errorbar(Kph, K[0]-master_offset[7], yerr=K[1], fmt=master_markers[7], color=master_colors[7])
 
         data_save = np.array(zip(np.repeat('J', len(J[2])), J[2], Jph, J[0], J[1], J[3]),
             dtype=[('c1', 'S2'), ('c2', float), ('c3', float), ('c4', float),
@@ -412,10 +419,14 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
 
             ## Add to data to plot
             if filt == 'I1':
-                offset = -1.0
+                offset = master_offset[8]
+                marker = master_markers[8]
+                color = master_colors[8]
             if filt == 'I2':
-                offset = -1.5
-            mp.errorbar(phase, mag+offset, yerr=err, fmt='x')
+                offset = master_offset[9]
+                marker = master_markers[9]
+                color = master_colors[9]
+            mp.errorbar(phase, mag+offset, yerr=err, fmt=marker, color=color)
             ## Add data to file
             data_save = np.array(zip(band, mjd, phase, mag, err, source),
                 dtype=[('c1', 'S2'), ('c2', float), ('c3', float), ('c4', float),
@@ -951,19 +962,22 @@ def gloess(phased_lcv_file, clean=1, smoothing_params=None, ask=0, filters='all'
 
     # set to 1 if you want to save a single figure for each star with all data
     if master_plot == 1:
-        figtosave, ax = mp.subplots()
+        figtosave = mp.figure(figsize=(8,10))
+        ax = figtosave.add_subplot(111)
 
     master_filters = np.array(['U', 'B', 'V', 'R', 'I', 'J', 'H', 'K',
         'I1', 'I2'], dtype='S2')
     master_markers = np.array(['P', 'v', 'D', '>', 'x', 'p', 'd', '^', 'o', 's'])
     master_offset = np.array([1.0, 0.5, 0.0, -0.25, -0.5, -0.7, -0.9, -1.1, -1.0, -1.5 ])
-
+    master_colors = np.array(['xkcd:violet', 'xkcd:periwinkle', 'xkcd:sapphire',
+        'xkcd:sky blue', 'xkcd:emerald', 'xkcd:avocado', 'xkcd:goldenrod',
+        'xkcd:orange', 'xkcd:pink', 'xkcd:scarlet'])
     # read in the phased light curve file
     dtype1 = np.dtype([('filter', 'S2'), ('mjd', float), ('phase', float), ('mag', float), ('err', float)])
     data = np.loadtxt(phased_lcv_file, dtype=dtype1, usecols=(0,1,2,3,4))
 
     # which filters are available
-    filters = np.unique(data['filter'])
+    if filters == 'all': filters = np.unique(data['filter'])
     num_filters = len(filters)
 
 
@@ -989,7 +1003,7 @@ def gloess(phased_lcv_file, clean=1, smoothing_params=None, ask=0, filters='all'
 
         if clean == 1:
             # remove data with large error bars
-            filtered_err = sigma_clip(err, sigma=3, iters=1)
+            filtered_err = sigma_clip(err, sigma=3, iters=2)
             mag = mag[~filtered_err.mask]
             phase = phase[~filtered_err.mask]
             err = err[~filtered_err.mask]
@@ -1068,7 +1082,8 @@ def gloess(phased_lcv_file, clean=1, smoothing_params=None, ask=0, filters='all'
         ph_max = x[smoothed_mag == np.min(smoothed_mag)]
         ph_min = x[smoothed_mag == np.max(smoothed_mag)]
 
-        average_mag_err = 1/np.sum(1/err**2)
+        err_fit = amplitude/np.sqrt(12*len(err))
+        average_mag_err = np.sqrt(np.sum(err**2)/len(err)**2 + err_fit**2)
 
         # determine the epoch of maximum using the V band data
         if filt == 'V':
@@ -1095,7 +1110,8 @@ def gloess(phased_lcv_file, clean=1, smoothing_params=None, ask=0, filters='all'
 
             offset = master_offset[master_filters == filt]
             marker = master_markers[master_filters == filt][0]
-            ax.errorbar(phase, mag+offset, yerr=err, fmt=marker, zorder=1)
+            color = master_colors[master_filters == filt][0]
+            ax.errorbar(phase, mag+offset, yerr=err, fmt=marker, color=color, zorder=1)
             ax.plot(x_copy, smoothed_mag_copy+offset, 'k-')
 
     if master_plot == 1:

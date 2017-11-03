@@ -70,28 +70,37 @@ def daomatch_mosaic(dao_dir, channel, target, image_list):
     daomatch.expect("Good bye")
     daomatch.close()
 
-def deep_mosaic(dao_dir, mosaic, target, bcd_list):
+def deep_mosaic(dao_dir, mosaic, target, bcd_list, channel='', mosaics=0):
 
 ## Clean up previous runs
 
 #    mosaic = target+'_'+channel+'_deep_dn.fits'
-    first_file = re.sub('.fits', '_dn.als', mosaic)
+    if mosaics == 0: first_file = re.sub('.fits', '_dn.als', mosaic)
+    if mosaics == 1: first_file = re.sub('.fits', '_dn.alf', mosaic)
     for bcd in bcd_list:
         extensions = ['.mch']
         for ext in extensions:
             if (os.path.isfile('temp'+ext)): os.remove('temp'+ext)
-        next_bcd = re.sub("data/", target+":", bcd)
-        next_bcd = re.sub('.fits', '.als', next_bcd)
-        bcd2 = re.sub('data/', '../data/', bcd)
+        if mosaics == 0:
+            next_bcd = re.sub("data/", target+":", bcd)
+            next_bcd = re.sub('.fits', '.als', next_bcd)
+            bcd2 = re.sub('data/', '../data/', bcd)
+        if mosaics == 1:
+            next_bcd = re.sub("mosaics/", target+"m:", bcd)
+            next_bcd = re.sub('.fits', '.als', next_bcd)
+            bcd2 = re.sub('mosaics/', '../mosaics/', bcd)
         xmin, xmax, ymin, ymax = coordinates.find_deep_mos_coords(mosaic, bcd2)
         limits = '{:.2f}, {:.2f}, {:.2f}, {:.2f}'.format(xmin, xmax, ymin, ymax)
         ## run DAOMATCH on this file
         daomatch = pexpect.spawn(dao_dir+'daomatch')
-#        daomatch.logfile = sys.stdout
+        daomatch.logfile = sys.stdout
         daomatch.expect("Master input file")
-        daomatch.sendline(first_file+'*')
-        daomatch.expect('Ymin, Ymax')
-        daomatch.sendline(limits)
+        if mosaics == 0:
+            daomatch.sendline(first_file+'*')
+            daomatch.expect('Ymin, Ymax')
+            daomatch.sendline(limits)
+        if mosaics == 1:
+            daomatch.sendline(first_file)
         daomatch.expect("Output file")
         daomatch.sendline('temp.mch')
         check = daomatch.expect(["Next input file", "Write this transformation"])
@@ -102,7 +111,9 @@ def deep_mosaic(dao_dir, mosaic, target, bcd_list):
         daomatch.expect("Good bye")
         daomatch.close()
 
-        mosaic_mch = re.sub('.als', '.mch', first_file)
+        if mosaics == 0: mosaic_mch = re.sub('.als', '.mch', first_file)
+        if mosaics == 1: mosaic_mch = channel+'_mosaics.mch'
+
         if bcd == bcd_list [0]:
             f = open(mosaic_mch, 'w')
             f2 = open('temp.mch', 'r')
