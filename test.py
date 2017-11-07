@@ -6,103 +6,48 @@ import optical
 import daophot_setup
 import matplotlib.pyplot as mp
 from astropy.io import fits
-from matplotlib.colors import LogNorm
 import shutil
 import glob
 import coordinates
 import read_dao
 import lightcurves
 import numpy as np
+import os
+import re
 
 target_name = sys.argv[1]
-#channel = sys.argv[2]
-optical_folder = '/Users/jrneeley/CRRP/OpticalCatalogs/'
+channel = sys.argv[2]
+dao_dir = '/usr/local/phot/'
+optical_dir = '/Volumes/Annie/CRRP/OpticalCatalogs/'
+opt_dir = '/Volumes/Annie/CRRP/OPTfiles/'
+working_dir = os.getcwd()
 
-
-## Phase optical light curves 
-dtype1 = np.dtype([('id', 'S10'), ('period', float)])
-data = np.loadtxt('PeterPeriods.txt', dtype=dtype1)
-
-datasets = optical.compile_datasets(optical_folder, target_name, old=0)
-
-for star, period in zip(data['id'], data['period']):
-
-    lcv_file = optical_folder+target_name+'lcvs/'+target_name+star+'.lcv'
-    U, B, V, R, I = lightcurves.read_optical_lcv(lcv_file, old=0)
-    lightcurves.plot_phased_optical_lcv(U, B, V, R, I, period, star, datasets, plot_save=1)
-
-sys.exit()
-
-dtype1 = np.dtype([('star', 'S10'), ('dao_id', int)])
-data = np.loadtxt('PeterIDs.txt', dtype=dtype1)
-
-for ind, star in enumerate(data['star']):
-
-    lightcurves.make_mosaic_lcv(['I1'], [star], [data['dao_id'][ind]])
-    lightcurves.plot_raw_mosaic_lcv('mosaic_lcvs/'+star+'.lcv', data['dao_id'][ind])
-
-sys.exit()
-
-
-datasets = optical.compile_datasets(optical_folder, target_name)
-print '\n\nDatasets: '
-print datasets
-
-#legend =
-## Find periods of optical light curves
-dtype1 = np.dtype([('id', int), ('period', float)])
-data = np.loadtxt(target_name+'-clement.txt', dtype=dtype1, usecols=(0,3))
-
-
-for ind, lcv in enumerate(data['id']):
-    lcv_file = optical_folder+target_name+'lcvs/'+target_name+'V'+str(lcv)+'.lcv'
-    try:
-        U, B, V, R, I = lightcurves.read_optical_lcv(lcv_file, old=1)
-
-        period = lightcurves.find_period(V[0], V[1], V[2], data['period'][ind])
-        print lcv, period, 1/period, 1/data['period'][ind]
-
-#    lightcurves.plot_raw_optical_lcv(U, B, V, R, I)
-        lightcurves.plot_phased_optical_lcv(U, B, V, R, I, period, 'V'+str(lcv), datasets)
-    except:
-        print lcv_file
-        e = sys.exc_info()[0]
-        print str(e)
-    mp.show()
-    sys.exit()
-#######
-
-## Find periods of IRAC lightcurves
-lcvs = glob.glob('lcvs/matches/*.lcv')
-for lcv in lcvs:
-    dtype1 = np.dtype([('filter', 'S2'), ('aor', int), ('mjd', float),
-        ('mag', float), ('err', float)])
-    data = np.loadtxt(lcv, dtype=dtype1, usecols=(0,1,3,6,7))
-
-    filters = np.unique(data['filter'])
-    for filt in filters:
-        mag_all = data['mag'][data['filter'] == filt]
-        err_all = data['err'][data['filter'] == filt]
-        mjd_all = data['mjd'][data['filter'] == filt]
-        aor_all = data['aor'][data['filter'] == filt]
-        mag = mag_all[~np.isnan(mag_all)]
-        err = err_all[~np.isnan(mag_all)]
-        mjd = mjd_all[~np.isnan(mag_all)]
-        period = lightcurves.find_period(mag, err, mjd)
-        print lcv, period
-###########
-
-
-
-
-#calibration.find_stars_in_cat(optical_folder, target_name, channel)
-#calibration.find_zp(channel)
-#hdulist = fits.open('mosaic_dn.fits', mode='update')
-#prihdr = hdulist[0].header
-#scidata = hdulist[0].data
-#newdata = scidata[250:762,250:762]
-#outfile = 'slice_dn.fits'
-#hdu = fits.PrimaryHDU(newdata)
-#hdu.writeto(outfile, clobber=True)
-#infile = 'alf-ap-phot.dat'
-#calibration.find_zp_single_frame(infile)
+mosaic_dns = glob.glob('mosaics/'+channel+'*dn.fits')
+mosaic_dn = mosaic_dns[0]
+psf_stars = np.loadtxt('mosaics/'+channel+'-psf.reg', dtype=np.dtype([('x', float), ('y', float)]))
+coo_file = re.sub('.fits', '.coo', mosaic_dn)
+lst_file = re.sub('.fits', '.lst', mosaic_dn)
+f = open(coo_file, 'r')
+f2 = open(lst_file, 'w')
+for ind in range(3):
+    line = f.readline()
+    f2.write(line)
+f.close()
+f2.close()
+dtype = np.dtype([('id', int), ('x', float), ('y', float), ('c1', float),
+    ('c2', float), ('c3', float), ('c4', float)])
+all_stars = np.loadtxt(coo_file, dtype=dtype, skiprows=3)
+f_handle = open(lst_file, 'a')
+for x, y in zip(psf_stars['x'], psf_stars['y']):
+    dist = np.sqrt((all_stars['x'] - x)**2 + (all_stars['y'] - y)**2)
+    line = all_stars[dist == np.min(dist)]
+    np.savetxt(f_handle, line, fmt='%8i %8.2f %8.2f %8.3f %8.3f %8.3f %8.3f')
+f_handle.close()
+# measure the PSF
+#daophot.find_psf(dao_dir, mosaic_dn)
+#repeat = raw_input('Do you want to remove any PSF stars? [y/n]: ')
+#if repeat == 'y':
+#    ready = raw_input('Delete from .lst file and type continue when ready: ')
+#    daophot.find_psf(dao_dir, mosaic_dn)
+#if repeat == 'n':
+#    print 'PSF ok...continuing...\n'

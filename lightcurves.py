@@ -16,10 +16,15 @@ from astropy.stats import sigma_clip
 from IPython import display
 
 
-def make_lcv(channels, stars, dao_ids, data_dir=''):
+def make_lcv(channels, stars, dao_ids, data_dir='', mosaics=0):
 
-    lcv_folder = data_dir+'lcvs/mir/'
-    img_folder = data_dir+'data/'
+    if mosaics == 0:
+        lcv_folder = data_dir+'lcvs/mir/'
+        img_folder = data_dir+'data/'
+    if mosaics == 1:
+        lcv_folder = data_dir+'mosaic_lcvs/'
+        img_folder = data_dir+'mosaics/'
+
     for channel in channels:
         file_list = glob.glob(img_folder+channel+'*.cal')
         if len(file_list) == 0:
@@ -47,8 +52,12 @@ def make_lcv(channels, stars, dao_ids, data_dir=''):
 
             for ind2 in range(0,len(dao_ids)):
                 alf_match = np.argwhere(alf_id == dao_ids[ind2])
-                trash1, aor_num, frame_num, trash2 = file_list[ind].split('_')
+                if mosaics == 0:
+                    trash1, aor_num, frame_num, trash2 = file_list[ind].split('_')
         #        trash1, aor_num, trash2 = alf_list[ind].split('_')
+                if mosaics == 1:
+                    trash, aor_num, trash = file_list[ind].split('_')
+                    frame_num = 1
                 phot_data['aor'][ind2,ind] = int(aor_num)
                 phot_data['f_num'][ind2, ind] = int(frame_num)
                 phot_data['mjd'][ind2,ind] = mjd
@@ -80,62 +89,6 @@ def make_lcv(channels, stars, dao_ids, data_dir=''):
                 f_handle = open(lcv_folder+stars[ind]+'.lcv', 'a')
             np.savetxt(f_handle, data_save, comments='', fmt='%s %8i %2i %10.4f %7.3f %7.3f %6.3f %6.4f')
             f_handle.close()
-
-def make_mosaic_lcv(channels, stars, dao_ids):
-
-    for channel in channels:
-        alf_list = glob.glob('mosaics/'+channel+'*.alf')
-
-        phot_data = np.zeros(len(dao_ids), dtype=[('filter', 'S2', len(alf_list)),
-            ('id', 'S8'), ('aor', int, len(alf_list)), ('mjd', float, len(alf_list)),
-            ('f_num', int, len(alf_list)), ('x', float, len(alf_list)),
-            ('y', float, len(alf_list)), ('psf_mag', float, len(alf_list)),
-            ('psf_err', float, len(alf_list))])
-
-
-        phot_data['id'] = dao_ids
-
-        for ind in range(0,len(alf_list)):
-
-            alf_id, x, y, alf_mag, alf_err = read_dao.read_alf(alf_list[ind])
-            fits_file = re.sub(".alf",".fits",alf_list[ind])
-            hdulist = fits.open(fits_file, mode='update')
-            prihdr = hdulist[0].header
-            mjd = prihdr['mjd_obs']
-
-            for ind2 in range(0,len(dao_ids)):
-                alf_match = np.argwhere(alf_id == dao_ids[ind2])
-                trash1, aor_num, trash2 = alf_list[ind].split('_')
-                phot_data['aor'][ind2,ind] = int(aor_num)
-                phot_data['f_num'][ind2, ind] = 1
-                phot_data['mjd'][ind2,ind] = mjd
-                phot_data['filter'][ind2, ind] = channel
-                if len(alf_match):
-                    phot_data['x'][ind2,ind] = x[alf_match]
-                    phot_data['y'][ind2,ind] = y[alf_match]
-                    phot_data['psf_mag'][ind2, ind] = alf_mag[alf_match]
-                    phot_data['psf_err'][ind2, ind] = alf_err[alf_match]
-                else:
-                    phot_data['x'][ind2,ind] = float('NaN')
-                    phot_data['y'][ind2,ind] = float('NaN')
-                    phot_data['psf_mag'][ind2,ind] = float('NaN')
-                    phot_data['psf_err'][ind2,ind] = float('NaN')
-        print 'Writing to file...'
-        for ind in range(0,len(dao_ids)):
-
-            data_save = np.array(zip(phot_data['filter'][ind], phot_data['aor'][ind],
-                phot_data['f_num'][ind], phot_data['mjd'][ind],
-                phot_data['x'][ind], phot_data['y'][ind],
-                phot_data['psf_mag'][ind], phot_data['psf_err'][ind]),
-                dtype=[('c1', 'S2'), ('c2', int), ('c3', int), ('c4', float),
-                ('c5', float), ('c6', float), ('c7', float), ('c8', float)])
-            if channel == channels[0]:
-                f_handle = open('mosaic_lcvs/'+stars[ind]+'.lcv', 'w')
-            else:
-                f_handle = open('mosaic_lcvs/'+stars[ind]+'.lcv', 'a')
-            np.savetxt(f_handle, data_save, comments='', fmt='%s %8i %2i %10.4f %7.3f %7.3f %6.3f %6.4f')
-            f_handle.close()
-
 
 def phase_lcv(lcv_file, period, T0, bin=0, save=1, plot=0, error_threshold=0.3):
 
@@ -247,12 +200,13 @@ def phase_lcv(lcv_file, period, T0, bin=0, save=1, plot=0, error_threshold=0.3):
             mp.show()
     mp.gcf().clear()
 
-def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_lcv=0, bin_mir=0, data_dir='', old=0):
+def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_lcv=0, bin_mir=0, data_dir='', old=0, mosaics=0):
 
     fig = mp.figure(figsize=(8,10))
     path_to_optical = data_dir+'lcvs/optical/'
     path_to_nir = data_dir+'lcvs/nir/'
-    path_to_mir = data_dir+'lcvs/mir/'
+    if mosaics == 0: path_to_mir = data_dir+'lcvs/mir/'
+    if mosaics == 1: path_to_mir = data_dir+'mosaic_lcvs/'
 
     if os.path.isfile(path_to_optical+target+lcv):
         optical_lcv = 1
@@ -263,14 +217,14 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
     master_filters = np.array(['U', 'B', 'V', 'R', 'I', 'J', 'H', 'K',
         'I1', 'I2'], dtype='S2')
     master_markers = np.array(['P', 'v', 'D', '>', 'x', 'p', 'd', '^', 'o', 's'])
-    master_offset = np.array([1.0, 0.5, 0.0, -0.25, -0.5, -0.7, -0.9, -1.1, -1.0, -1.5 ])
+    master_offset = np.array([1.0, 0.5, 0.0, -0.25, -0.5, 0.2, 0.5, 0.8, -1.0, -1.5 ])
     master_colors = np.array(['xkcd:violet', 'xkcd:periwinkle', 'xkcd:sapphire',
         'xkcd:sky blue', 'xkcd:emerald', 'xkcd:avocado', 'xkcd:goldenrod',
         'xkcd:orange', 'xkcd:pink', 'xkcd:scarlet'])
 
     if optical_lcv == 1:
-        phased_file = re.sub('\.lcv', '.phased', lcv)
-
+        if mosaics == 0: phased_file = re.sub('\.lcv', '.phased', lcv)
+        if mosaics == 1: phased_file = re.sub('\.lcv', '.mphased', lcv)
         U, B, V, R, I = read_optical_lcv(path_to_optical+target+lcv, old=old)
 
 
@@ -314,7 +268,8 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
         np.savetxt(f_handle, data_save, fmt='%s %10.4f %8.6f %6.3f %5.3f %s')
 
     if nir_lcv == 1:
-        phased_file = re.sub('\.lcv', '.phased', lcv)
+        if mosaics == 0: phased_file = re.sub('\.lcv', '.phased', lcv)
+        if mosaics == 1: phased_file = re.sub('\.lcv', '.mphased', lcv)
 
         J, H, K = read_nir_lcv(path_to_nir+target+lcv, old=old)
 
@@ -439,7 +394,8 @@ def phase_lcv_all_bands(target, lcv, period, T0, optical_lcv=0, nir_lcv=0, mir_l
     mp.xlabel('Phase')
     mp.ylabel('Mag + offset')
     mp.title(lcv)
-    plot_file = re.sub('\.phased', '-ph.pdf', phased_file)
+    if mosaics == 0: plot_file = re.sub('\.phased', '-ph.pdf', phased_file)
+    if mosaics == 1: plot_file = re.sub('\.mphased', '-mph.pdf', phased_file)
     mp.savefig(data_dir+'lcvs/'+plot_file)
     mp.show()
     f_handle.close()
@@ -627,7 +583,7 @@ def plot_raw_optical_lcv(U):#, B, V, R, I):
     mp.show()
 
 def plot_phased_optical_lcv(U, B, V, R, I, period, name, datasets, plot_save=0,
-    data_dir='', error_threshold=0, colors=None):
+    data_dir='', error_threshold=0.05, colors=None):
 
 
     fig, axs = mp.subplots(5, 1, figsize=(10,13), sharex=True)
@@ -958,7 +914,7 @@ def period_search_hybrid(first_band, initial_guess, name, second_band=None,
         best_period = best_period[0]
     return best_period
 
-def gloess(phased_lcv_file, clean=1, smoothing_params=None, ask=0, filters='all', master_plot=0):
+def gloess(phased_lcv_file, clean=1, smoothing_params=None, ask=0, filters='all', master_plot=0, mosaics=0):
 
     # set to 1 if you want to save a single figure for each star with all data
     if master_plot == 1:
@@ -1063,7 +1019,8 @@ def gloess(phased_lcv_file, clean=1, smoothing_params=None, ask=0, filters='all'
         #    if smoothing_params[master_filters == filt] != 1.0:
             if ask == 0:
                 happy = 'y'
-                plot_file = re.sub('.phased', '-'+filt+'fit.pdf', phased_lcv_file)
+                if mosaics == 0: plot_file = re.sub('.phased', '-'+filt+'fit.pdf', phased_lcv_file)
+                if mosaics == 1: plot_file = re.sub('.mphased', '-'+filt+'mfit.pdf', phased_lcv_file)
                 mp.savefig(plot_file, format='pdf')
                 continue
             check = raw_input('Are you happy with this fit? [y/n]: ')
@@ -1096,7 +1053,8 @@ def gloess(phased_lcv_file, clean=1, smoothing_params=None, ask=0, filters='all'
         master_sigma[master_filters == filt] = sigma
         master_avg_mag_er[master_filters == filt] = average_mag_err
 
-        fit_file = re.sub('.phased', '.fit', phased_lcv_file)
+        if mosaics == 0: fit_file = re.sub('.phased', '.fit', phased_lcv_file)
+        if mosaics == 1: fit_file = re.sub('.mphased', '.mfit', phased_lcv_file)
         if filt == filters[0]:
             f = open(fit_file, 'w')
         else:
@@ -1122,7 +1080,8 @@ def gloess(phased_lcv_file, clean=1, smoothing_params=None, ask=0, filters='all'
         ax.set_xlim((-0.2, 2.0))
         ax.set_xlabel('Phase')
         ax.set_ylabel('Mag + offset')
-        plot_file = re.sub('\.phased', '-fit.pdf', phased_lcv_file)
+        if mosaics == 0: plot_file = re.sub('\.phased', '-fit.pdf', phased_lcv_file)
+        if mosaics == 1: plot_file = re.sub('\.mphased', '-mfit.pdf', phased_lcv_file)
         mp.savefig(plot_file)
 
     return master_filters, master_avg_mag, master_avg_mag_er, master_amp, master_sigma

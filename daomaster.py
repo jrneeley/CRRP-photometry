@@ -140,7 +140,7 @@ def daomaster_mosaic(dao_dir, matchfile):
 
     daomaster.close(force=True)
 
-def deep_mosaic(dao_dir, matchfile):
+def deep_mosaic(dao_dir, matchfile, mosaics=0):
 
 ## Clean up previous runs
     magfile=re.sub(".mch", ".mag", matchfile)
@@ -152,7 +152,10 @@ def deep_mosaic(dao_dir, matchfile):
     daomaster.expect("File with list of input files")
     daomaster.sendline(matchfile)
     daomaster.expect("Minimum number")
-    daomaster.sendline("12, 0.5, 24")
+    if mosaics == 0:
+        daomaster.sendline("12, 0.5, 24")
+    if mosaics == 1:
+        daomaster.sendline('12, 0.5, 12')
     daomaster.expect("Maximum sigma")
     daomaster.sendline("10")
     daomaster.expect("Your choice")
@@ -178,7 +181,13 @@ def deep_mosaic(dao_dir, matchfile):
     daomaster.expect("New match-up radius")
     daomaster.sendline("1")
     daomaster.expect("New match-up radius")
-    daomaster.sendline("1")
+    daomaster.sendline("0.5")
+    daomaster.expect("New match-up radius")
+    daomaster.sendline("0.5")
+    daomaster.expect("New match-up radius")
+    daomaster.sendline("0.5")
+    daomaster.expect("New match-up radius")
+    daomaster.sendline("0.5")
     daomaster.expect("New match-up radius")
     daomaster.sendline("0")
     daomaster.expect("Assign new star IDs")

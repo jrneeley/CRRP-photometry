@@ -25,7 +25,7 @@ def allstar_init(dao_dir, target, fitsfile, mosaics=0):
     #    print "Working on " + image
 
 ## Running ALLSTAR
-	allstar = pexpect.spawn(dao_dir+'allstar')
+	allstar = pexpect.spawn(dao_dir+'allstar', timeout=240)
 	#allstar.logfile = sys.stdout
 
 	allstar.expect("OPT")

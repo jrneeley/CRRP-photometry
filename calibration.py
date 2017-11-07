@@ -263,11 +263,16 @@ def find_zp_single_frame_old(infile):
     mp.plot(data['ap_mag'], zp, 'ro')
     mp.show()
 
-def find_zp_bcds(channel, data_dir=''):
+def find_zp_bcds(channel, data_dir='', mosaics=0):
 
-    if channel == 'I1': zmag = 17.12
-    if channel == 'I2': zmag = 16.65
-    fits_list = glob.glob(data_dir+'data/'+channel+'*[0-9].fits')
+    if mosaics == 0:
+        fits_list = glob.glob(data_dir+'data/'+channel+'*[0-9].fits')
+        if channel == 'I1': zmag = 17.12
+        if channel == 'I2': zmag = 16.65
+    if mosaics == 1:
+        fits_list = glob.glob(data_dir+'mosaics/'+channel+'*[0-9].fits')
+        if channel == 'I1': zmag = 18.67
+        if channel == 'I2': zmag = 18.19
 
     diff1 = np.array([], dtype=float)
     diff2 = np.array([], dtype=float)
@@ -341,9 +346,12 @@ def find_zp_bcds(channel, data_dir=''):
         y2 = diff2[names == star]
         psf = y3 - y2
         filtered_y3 = sigma_clip(y3, sigma=2, iters=5)
-
-        mp.plot(filtered_y3, y1, 'ro')
-        mp.plot(filtered_y3, y2, 'bo')
+        if mosaics == 0:
+            mp.plot(filtered_y3, y1, 'ro')
+            mp.plot(filtered_y3, y2, 'bo')
+        if mosaics == 1:
+            mp.plot(y3, y1, 'ro')
+            mp.plot(y3, y2, 'bo')
         mp.xlabel('Aperture phot mag')
         mp.ylabel('Residual')
         mp.title(star)
@@ -424,9 +432,12 @@ def find_zp_deep_mosaic(target, channel, data_dir=''):
 
     return np.mean(filtered_diff2), np.std(filtered_diff2)
 
-def apply_calibration_bcds(target, channel, zp, data_dir=''):
+def apply_calibration_bcds(target, channel, zp, data_dir='', mosaics=0):
 
-    alf_list = glob.glob(data_dir+'data/'+channel+'*.alf')
+    if mosaics == 0:
+        alf_list = glob.glob(data_dir+'data/'+channel+'*.alf')
+    if mosaics == 1:
+        alf_list = glob.glob(data_dir+'mosaics/'+channel+'*.alf')
 
     alc_params = [0.98397385,-8.6387206e-05,3.6310403e-05,-5.6284359e-07,1.6023687e-06,1.3574380e-06]
 
@@ -447,8 +458,11 @@ def apply_calibration_bcds(target, channel, zp, data_dir=''):
         flux = 10**(data['c4'] / -2.5)
         x = np.round(data['c2'])
         y = np.round(data['c3'])
-        alc = alc_params[0] + alc_params[1]*(x-127) + alc_params[2]*(y-127) + alc_params[3]*(x-127)*(y-127) + alc_params[4]*(x-127)**2 + alc_params[5]*(y-127)**2
-        cflux = flux/alc
+        if mosaics == 0:
+            alc = alc_params[0] + alc_params[1]*(x-127) + alc_params[2]*(y-127) + alc_params[3]*(x-127)*(y-127) + alc_params[4]*(x-127)**2 + alc_params[5]*(y-127)**2
+            cflux = flux/alc
+        if mosaics == 1:
+            cflux = flux
 
         cmag = -2.5*np.log10(cflux)
         data['c4'] = cmag + zp
@@ -495,12 +509,15 @@ def apply_calibration_deep_mosaic(target, channel, zp, data_dir=''):
     np.savetxt(f, data, fmt='%7i %8.3f %8.3f %8.3f %8.4f %8.2f %8s %8.2f %8.3f')
     f.close()
 
-def find_lst_stars(target, channel, data_dir=''):
+def find_lst_stars(target, channel, data_dir='', mosaics=0):
 
     lst_file = data_dir+'DeepMosaic/'+target+'_'+channel+'_deep_dn.lst'
     alf_file = data_dir+'DeepMosaic/'+target+'_'+channel+'_deep_dn.alf'
 
-    alf_all_list = glob.glob(data_dir+'data/'+channel+'*.alf')
+    if mosaics == 0:
+        alf_all_list = glob.glob(data_dir+'data/'+channel+'*.alf')
+    if mosaics == 1:
+        alf_all_list = glob.glob(data_dir+'mosaics/'+channel+'*.alf')
 
     id_init, x_init, y_init = read_dao.read_lst(lst_file)
     id_alf, x_new, y_new, psf_mag, psf_err = read_dao.read_alf(alf_file)
@@ -522,6 +539,7 @@ def find_lst_stars(target, channel, data_dir=''):
         match_id = id_alf[dist == np.min(dist)]
         match_mag = psf_mag[dist == np.min(dist)]
         match_err = psf_err[dist == np.min(dist)]
+        # find all stars within 10 (mosiac) pixels of the calibrators
         neighbor_ids = id_alf[dist < 10]
         neighbor_mags = psf_mag[dist < 10]
         neighbor_dists = dist[dist < 10]
@@ -546,22 +564,23 @@ def find_lst_stars(target, channel, data_dir=''):
         psf_star_id[idx] = match_id
         neigh_dists[idx] = neighbor_dists
         print match_id, neighbor_ids
-
-    # make coo file for deep mosaic
-    coo_mosaic = re.sub('_dn.lst', '.coo', lst_file)
-    f_handle = open(coo_mosaic, 'w')
-    f = open(lst_file, 'r')
-    for ii in range(3):
-        line = f.readline()
-        f_handle.write(line)
-    f.close()
-    f_handle.close()
-    f_handle = open(coo_mosaic, 'a')
-    data_save = np.array(zip(psf_star_id, psf_star_x, psf_star_y, psf_star_mags,
-        psf_star_errs, psf_star_cmags, np.repeat(-9.999, n_psf_stars)), dtype=[('id', int), ('x', float), ('y', float),
-        ('mag', float), ('err', float), ('mag2', float), ('oth2', float)])
-    np.savetxt(f_handle, data_save, fmt='%8i %8.2f %8.2f %8.3f %8.3f %8.3f %8.3f')
-    f_handle.close()
+    # we only need this step if it wasn't already done.
+    if mosaics == 0:
+        # make coo file for deep mosaic
+        coo_mosaic = re.sub('_dn.lst', '.coo', lst_file)
+        f_handle = open(coo_mosaic, 'w')
+        f = open(lst_file, 'r')
+        for ii in range(3):
+            line = f.readline()
+            f_handle.write(line)
+        f.close()
+        f_handle.close()
+        f_handle = open(coo_mosaic, 'a')
+        data_save = np.array(zip(psf_star_id, psf_star_x, psf_star_y, psf_star_mags,
+            psf_star_errs, psf_star_cmags, np.repeat(-9.999, n_psf_stars)), dtype=[('id', int), ('x', float), ('y', float),
+            ('mag', float), ('err', float), ('mag2', float), ('oth2', float)])
+        np.savetxt(f_handle, data_save, fmt='%8i %8.2f %8.2f %8.3f %8.3f %8.3f %8.3f')
+        f_handle.close()
 
     # collect multi-epoch allframe photometry
     for alf_file in alf_all_list:
@@ -606,20 +625,29 @@ def find_lst_stars(target, channel, data_dir=''):
             f_handle.close()
 
 
-def do_ap_phot(target, channel, exptime, data_dir='', dao_dir=''):
+def do_ap_phot(target, channel, exptime, data_dir='', dao_dir='', mosaics=0):
 
     # list original [in flux units] fits files
-    fits_list = glob.glob(data_dir+'data/'+channel+'*[0-9].fits')
+    if mosaics == 0:
+        fits_list = glob.glob(data_dir+'data/'+channel+'*[0-9].fits')
+    if mosaics == 1:
+        fits_list = glob.glob(data_dir+'mosaics/'+channel+'*[0-9].fits')
     deep_mosaic = target+'_'+channel+'_deep.fits'
 
     # copy appropriate OPT files for invidual BCDs
     opt_dir = data_dir+'../OPTfiles/'
-    daophot_setup.set_opt_files(opt_dir, channel, exptime, warm=1)
+    if mosaics == 0:
+        daophot_setup.set_opt_files(opt_dir, channel, exptime, warm=1)
+    if mosaics == 1:
+        daophot_setup.set_opt_files_mosaic(opt_dir, channel, exptime, warm=1)
     # start DAOPHOT
     daophot = pexpect.spawn(dao_dir+'daophot')
     daophot.logfile = sys.stdout
     for image in fits_list:
-        img = re.sub(data_dir+'data/', target+':', image)
+        if mosaics == 0:
+            img = re.sub(data_dir+'data/', target+':', image)
+        if mosaics == 1:
+            img = re.sub(data_dir+'mosaics/', target+'m:', image)
         daophot.expect("Command:")
         daophot.sendline("at " + img)
         daophot.expect("Command:")
@@ -636,32 +664,33 @@ def do_ap_phot(target, channel, exptime, data_dir='', dao_dir=''):
     daophot.sendline('exit')
     daophot.close(force=True)
 
-
-    os.chdir(data_dir+'/DeepMosaic')
-    print 'Changed directory to DeepMosaic\n'
-    # Now do aperture photometry on the deep mosaic
-    daophot_setup.set_opt_files_mosaic(opt_dir, channel, exptime, warm=1)
-    lst_file = re.sub('.fits', '.coo', deep_mosaic)
-    ap_file = re.sub('.fits', '.ap', deep_mosaic)
-    # start DAOPHOT
-    daophot = pexpect.spawn(dao_dir+'daophot')
-    daophot.logfile = sys.stdout
-    img = re.sub(data_dir+'data/', target+':', image)
-    daophot.expect("Command:")
-    daophot.sendline("at " + deep_mosaic)
-    daophot.expect("Command:")
-    daophot.sendline("phot")
-    daophot.expect("File with aperture radii")
-    daophot.sendline("")
-    daophot.expect("PHO>")
-    daophot.sendline("")
-    daophot.expect("Input position file")
-    daophot.sendline(lst_file)
-    daophot.expect("Output file")
-    daophot.sendline(ap_file)
-    daophot.expect('Command:')
-    daophot.sendline('exit')
-    daophot.close(force=True)
+    # only need to do this if is isn't already done
+    if mosaics == 0:
+        os.chdir(data_dir+'/DeepMosaic')
+        print 'Changed directory to DeepMosaic\n'
+        # Now do aperture photometry on the deep mosaic
+        daophot_setup.set_opt_files_mosaic(opt_dir, channel, exptime, warm=1)
+        lst_file = re.sub('.fits', '.coo', deep_mosaic)
+        ap_file = re.sub('.fits', '.ap', deep_mosaic)
+        # start DAOPHOT
+        daophot = pexpect.spawn(dao_dir+'daophot')
+        daophot.logfile = sys.stdout
+        img = re.sub(data_dir+'data/', target+':', image)
+        daophot.expect("Command:")
+        daophot.sendline("at " + deep_mosaic)
+        daophot.expect("Command:")
+        daophot.sendline("phot")
+        daophot.expect("File with aperture radii")
+        daophot.sendline("")
+        daophot.expect("PHO>")
+        daophot.sendline("")
+        daophot.expect("Input position file")
+        daophot.sendline(lst_file)
+        daophot.expect("Output file")
+        daophot.sendline(ap_file)
+        daophot.expect('Command:')
+        daophot.sendline('exit')
+        daophot.close(force=True)
 
 
 def get_flux_ratio(channel, pixel_distance):
