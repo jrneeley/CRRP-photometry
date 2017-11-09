@@ -211,15 +211,18 @@ def compile_datasets(target, old=0, returnColors=True):
     lcvs = glob.glob(target+'lcvs/optical/*.lcv')
 #    all_datasets = np.zeros(1, dtype='S30')
 #    all_jds = np.zeros(1, dtype=float)
+    num_images = 0
     for lcv in lcvs:
-        
+
         U, B, V, R, I = lightcurves.read_optical_lcv(lcv, old=old)
         if lcv == lcvs[0]:
             all_datasets = np.array(U[3], dtype='S35')
             all_jds = np.array(U[2], dtype=float)
+            num_images += len(U[0])+len(B[0])+len(V[0])+len(R[0])+len(I[0])
         else:
             all_datasets = np.append(all_datasets, U[3])
             all_jds = np.append(all_jds, U[2])
+            num_images += len(U[0])+len(B[0])+len(V[0])+len(R[0])+len(I[0])
         all_datasets = np.append(all_datasets, B[3])
         all_datasets = np.append(all_datasets, V[3])
         all_datasets = np.append(all_datasets, R[3])
@@ -230,6 +233,7 @@ def compile_datasets(target, old=0, returnColors=True):
         all_jds = np.append(all_jds, I[2])
     all_jds = all_jds + 2400000.5
     datasets_prefix = np.zeros(len(all_datasets), dtype='S30')
+    print 'Total number of images: {} '.format(num_images)
     for ind, string in enumerate(all_datasets):
         datasets_prefix[ind] = string.split(':')[0]
     unique, counts = np.unique(datasets_prefix, return_counts=True)
