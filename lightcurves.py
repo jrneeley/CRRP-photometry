@@ -22,7 +22,7 @@ def make_lcv(channels, stars, dao_ids, data_dir='', mosaics=0):
         lcv_folder = data_dir+'lcvs/mir/'
         img_folder = data_dir+'data/'
     if mosaics == 1:
-        lcv_folder = data_dir+'mosaic_lcvs/'
+        lcv_folder = data_dir+'lcvs/'
         img_folder = data_dir+'mosaics/'
 
     for channel in channels:
@@ -476,10 +476,12 @@ def plot_raw_mosaic_lcv(lcv_file, dao_id):
             mp.savefig(plot_file)
             mp.gcf().clear()
 
-def read_optical_lcv(lcv_file, old=0):
+def read_optical_lcv_old(lcv_file, old=0):
 
     dtype1 = np.dtype([('mag', float), ('err', float), ('filter', int),
         ('year', int), ('day', float), ('source', 'S35')])
+
+
     if old == 1:
         data = np.loadtxt(lcv_file, dtype=dtype1, usecols=(0,1,2,4,5,8))
     if old == 0:
@@ -518,35 +520,50 @@ def read_optical_lcv(lcv_file, old=0):
 
     return U, B, V, R, I
 
+def read_optical_lcv(lcv_file, old=0):
+
+    dtype1 = np.dtype([('mag', float), ('err', float), ('filter', 'a2'),
+        ('year', int), ('day', float), ('source', 'S35')])
+
+    if old == 1:
+        data = np.loadtxt(lcv_file, dtype=dtype1, usecols=(0,1,2,4,5,8))
+    if old == 0:
+        data = np.loadtxt(lcv_file, dtype=dtype1, usecols=(0,1,2,4,5,10))
+
+    data['filter'][data['filter'] == '1'] = 'V'
+    data['filter'][data['filter'] == '2'] = 'B'
+    data['filter'][data['filter'] == '3'] = 'I'
+    data['filter'][data['filter'] == '4'] = 'R'
+    data['filter'][data['filter'] == '5'] = 'U'
+    data['day'] = data['year']*1000. + data['day'] - 2400000.5
+
+    return data
+
 def read_nir_lcv(lcv_file, old=0):
 
-    dtype1 = np.dtype([('mag', float), ('err', float), ('filter', int),
+    dtype1 = np.dtype([('mag', float), ('err', float), ('filter', 'a1'),
         ('year', int), ('day', float), ('source', 'S35')])
     if old == 1:
         data = np.loadtxt(lcv_file, dtype=dtype1, usecols=(0,1,2,4,5,8))
     if old == 0:
         data = np.loadtxt(lcv_file, dtype=dtype1, usecols=(0,1,2,4,5,10))
 
-    J = np.zeros((4, len(data['filter'][data['filter'] == 1])), dtype=object)
-    J[0][:] = data['mag'][data['filter'] == 1]
-    J[1][:] = data['err'][data['filter'] == 1]
-    J[2][:] = data['year'][data['filter'] == 1]*1000 + data['day'][data['filter'] == 1]
-    J[2] = J[2] - 2400000.5
-    J[3][:] = data['source'][data['filter'] == 1]
-    H = np.zeros((4, len(data['filter'][data['filter'] == 2])), dtype=object)
-    H[0][:] = data['mag'][data['filter'] == 2]
-    H[1][:] = data['err'][data['filter'] == 2]
-    H[2][:] = data['year'][data['filter'] == 2]*1000 + data['day'][data['filter'] == 2]
-    H[2] = H[2] - 2400000.5
-    H[3][:] = data['source'][data['filter'] == 2]
-    K = np.zeros((4, len(data['filter'][data['filter'] == 3])), dtype=object)
-    K[0][:] = data['mag'][data['filter'] == 3]
-    K[1][:] = data['err'][data['filter'] == 3]
-    K[2][:] = data['year'][data['filter'] == 3]*1000 + data['day'][data['filter'] == 3]
-    K[2] = K[2] - 2400000.5
-    K[3][:] = data['source'][data['filter'] == 3]
+    data['filter'][data['filter'] == '1'] = 'J'
+    data['filter'][data['filter'] == '2'] = 'H'
+    data['filter'][data['filter'] == '3'] = 'K'
+    data['day'] = data['year']*1000. + data['day'] - 2400000.5
 
-    return J, H, K
+    return data
+
+def read_mir_lcv(lcv_file, old=0):
+
+    dtype1 = np.dtype([('filter', 'a2'), ('aor', 'a8'), ('frame', int),
+        ('mjd', float), ('x', float), ('y', float), ('mag', float),
+        ('err', float)])
+
+    data = np.loadtxt(lcv_file, dtype=dtype1)
+
+    return data
 
 def select_datasets(V, datasets):
 

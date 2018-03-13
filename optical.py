@@ -108,11 +108,26 @@ def read_fnl(optical_dir, target):
     print "Finished reading optical catalog."
     return data
 
+def read_nir_fnl(optical_dir, target):
+
+    catalog=optical_dir+target+'ir.fnl'
+
+    print "Reading NIR catalog for "+target+"..."
+
+    dtype1 = np.dtype([('id', int), ('x', float), ('y', float), ('J', float),
+        ('Jer', float), ('H', float), ('Her', float), ('K', float), ('Ker', float),
+        ('nJ', int), ('nH', int), ('nK', int), ('chi', float),
+        ('sharp', float), ('var1', float), ('var2', float), ('var3', float),
+        ('var4', float), ('var5', float), ('ra_h', int), ('ra_m', int),
+        ('ra_s', float), ('dec_d', int), ('dec_m', int), ('dec_s', float)])
+    data = np.loadtxt(catalog, dtype=dtype1, skiprows=3, usecols=range(25))
+
+    print "Finished reading optical catalog."
+    return data
+
 def find_variables_fnl(optical_dir, target, center_ra, center_dec, data_dir=''):
 
     catalog=optical_dir+target+'.fnl'
-
-    print "Reading optical catalog for "+target+"..."
 
     f = open(catalog, 'r')
     lines = f.readlines()
@@ -124,6 +139,7 @@ def find_variables_fnl(optical_dir, target, center_ra, center_dec, data_dir=''):
         if len(temp) == 32:
             master_id.append(int(temp[0]))
             variable_id.append(temp[-1])
+    f.close()
 
     data, dist = read_fnl_w_radial_dist(optical_dir, target, center_ra, center_dec)
     mags = np.zeros(len(master_id))
@@ -162,7 +178,7 @@ def find_variables_fnl(optical_dir, target, center_ra, center_dec, data_dir=''):
         dtype=[('c1', 'S10'), ('c2', int), ('c3', float), ('c4', float), ('c5', float),
         ('c6', float), ('c7', float), ('c8', float), ('c9', float), ('c10', 'S13'),
         ('c11', 'S13'), ('c12', float)])
-    np.savetxt(data_dir+'PeterIDs.txt', data_save, comments='',
+    np.savetxt(data_dir+'candidate-vars.txt', data_save, comments='',
         fmt='%10s %8i %7.3f %6.3f %7.3f %7.3f %7.3f %6.1f %7.4f %13s %13s %10.3f')
 
 def cut_optical_catalog(optical_dir, target, xmin, xmax, ymin, ymax):

@@ -1,15 +1,22 @@
 import numpy as np
+import matplotlib.pyplot as mp
 import daophot_setup
 import daophot
 import re
 import allstar
 import os
 import sys
+import optical
+import coordinates
+sys.path.insert(0, '/Users/Jill/python/daophot-tools/')
+import daomatch
+import daomaster
+import read_dao
 
-def mosaic_phot(dao_dir, opt_dir, mosaic_fits, channel, exptime):
+def mosaic_phot(mosaic_fits, channel, exptime, dao_dir='/usr/local/phot/', data_dir='', opt_dir='/Volumes/Annie/CRRP/OPTfiles/'):
 
     curr_dir = os.getcwd()
-    os.chdir(curr_dir+'/DeepMosaic')
+    os.chdir(data_dir+'DeepMosaic')
     print 'Changed directory to DeepMosaic\n'
 # headers of deep mosaics are wrong, so must input right numbers here.
     # convert deep mosaic to counts
@@ -65,5 +72,85 @@ def mosaic_phot(dao_dir, opt_dir, mosaic_fits, channel, exptime):
     print 'Running allstar on deep mosaic again...'
     allstar.allstar_deep(dao_dir, mosaic_dn)
     print 'Finished with deep mosaic. \n'
+    os.chdir('../')
+    ## need to update .lst file with new ID numbers/positions
 
-    ## need to update .lst file with new ID numbers/positions 
+def match_optical(target, channel, data_dir='', optical_dir='/Volumes/Annie/CRRP/OpticalCatalogs/', dao_dir='/usr/local/phot/'):
+
+    deep_mosaic_fits = target+'_'+channel+'_deep.fits'
+
+    curr_dir = os.getcwd()
+    os.chdir(data_dir+'DeepMosaic')
+    ids, catalog_x, catalog_y, catalog_ra, catalog_dec = optical.read_optical_fnl(optical_dir, target)
+
+    als_file = re.sub('.fits', '_dn.als', deep_mosaic_fits)
+    dtype1 = np.dtype([('x', float), ('y', float)])
+    data = np.loadtxt(als_file, dtype=dtype1, skiprows=3, usecols=(1,2))
+    xmin = np.min(data['x'])
+    xmax = np.max(data['x'])
+    ymin = np.min(data['y'])
+    ymax = np.max(data['y'])
+
+    print "Calculating optical boundaries..."
+
+    ra1, ra2, dec1, dec2 = coordinates.find_coord_window_mosaic(deep_mosaic_fits, xmin, xmax, ymin, ymax)
+    print ra1, ra2, dec1, dec2
+    min_x, min_y = coordinates.radec2catalogpix(ra1, dec1, catalog_x, catalog_y, catalog_ra, catalog_dec)
+    max_x, max_y = coordinates.radec2catalogpix(ra2, dec2, catalog_x, catalog_y, catalog_ra, catalog_dec)
+#		c1, c2, c3, c4 = coordinates.radec2pix(target, x1, x2, y1, y2, xcat, ycat, ra, dec)
+    print "Xmin, Xmax, Ymin, Ymax for optical catalog:"
+    print min_x, max_x, min_y, max_y
+
+    xmin = [min_x]
+    xmax = [max_x]
+    ymin = [min_y]
+    ymax = [max_y]
+    f = ['Deep']
+
+# Save boundary window for each field into a text file (e.g. I1-catalog-cuts.txt)
+    data_save = np.array(zip(f, xmin, xmax, ymin, ymax), dtype=[('c1', 'S8'),
+        ('c2', float), ('c3', float), ('c4', float), ('c5', float)])
+    np.savetxt(channel+'-deep-cuts.txt', data_save, comments='', fmt='%s %0.3f %0.3f %0.3f %0.3f')
+
+    limits = str(min_x)+','+str(max_x)+','+str(min_y)+','+str(max_y)
+    image_list = ['optical:'+target+'-I.mag', als_file]
+    mch_file = 'op-'+channel+'.mch'
+    daomatch.daomatch(image_list, mch_file, dao_dir=dao_dir, xy_limits=limits)
+    daomaster.daomaster(mch_file, dao_dir='/usr/local/phot/', frame_num='1,0.5,1')
+    os.chdir(curr_dir)
+
+def check_match(target, channel, optical_dir='/Volumes/Annie/CRRP/OpticalCatalogs/', data_dir=''):
+
+    fig = mp.figure(figsize=(8,8))
+    ax1 = fig.add_subplot(111)
+
+    # read optical catalog and add to plots
+    ids, xcat, ycat, ra, dec = optical.read_optical_fnl(optical_dir, target)
+    ax1.plot(xcat, ycat, '.', color='0.25', markersize=0.75)
+
+    # read boundaries of IRAC data
+    dtype1 = np.dtype([('xmin', float), ('xmax', float), ('ymin', float), ('ymax', float)])
+    cuts = np.loadtxt(data_dir+'DeepMosaic/'+channel+'-deep-cuts.txt', dtype=dtype1, usecols=(1,2,3,4))
+
+    ax1.plot([cuts['xmin'], cuts['xmax']], [cuts['ymin'], cuts['ymin']],
+        '-', color='r', linewidth=2)
+    ax1.plot([cuts['xmin'], cuts['xmax']], [cuts['ymax'], cuts['ymax']],
+        '-', color='r', linewidth=2)
+    ax1.plot([cuts['xmin'], cuts['xmin']], [cuts['ymin'], cuts['ymax']],
+        '-', color='r', linewidth=2)
+    ax1.plot([cuts['xmax'], cuts['xmax']], [cuts['ymin'], cuts['ymax']],
+        '-', color='r', linewidth=2)
+    ax1.set_xlabel('X (pixels)')
+    ax1.set_ylabel('Y (pixels)')
+
+
+    # Add transformed catalogs
+    ids, x, y, mag, err = read_dao.read_alf(data_dir+'DeepMosaic/'+target+'_'+channel+'_deep_dn.als')
+
+    files, x_off, y_off, transform, dof = read_dao.read_mch(data_dir+'DeepMosaic/op-'+channel+'.mch')
+
+    x_new = float(x_off[1])+float(transform[1][0])*x+float(transform[1][1])*y
+    y_new = float(y_off[1])+float(transform[1][2])*x+float(transform[1][3])*y
+
+    ax1.plot(x_new, y_new, '.', markersize=1.8, color='r')
+    mp.show()

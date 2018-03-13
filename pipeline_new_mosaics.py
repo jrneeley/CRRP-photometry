@@ -75,7 +75,7 @@ if (start <= 0):
 	print "Initial aperture photometry complete. \n"
 
 if (start <= 1):
-## Find PSF on first frame only (manually)
+
 	mosaic_dns = glob.glob('mosaics/'+channel+'*dn.fits')
 	mosaic_dn = mosaic_dns[0]
 

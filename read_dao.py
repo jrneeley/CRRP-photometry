@@ -44,7 +44,7 @@ def read_mag(mag_file):
         ('err', float)])
     data = np.loadtxt(mag_file, dtype=dtype1, usecols=(0,1,2,3,4), skiprows=3)
 
-    return data['id'], data['x'], data['y'], data['mag'], data['err']
+    return data
 
 def read_mch(mch_file):
 

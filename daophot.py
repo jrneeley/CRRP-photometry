@@ -25,7 +25,7 @@ def init_phot(dao_dir, target, fitsfile, mosaics=0):
 ## Running daophot
 
 	daophot = pexpect.spawn(dao_dir+'daophot')
-#	daophot.logfile = sys.stdout
+	#daophot.logfile = sys.stdout
 
 # attach the image
 	daophot.expect("Command:")

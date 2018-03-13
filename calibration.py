@@ -420,9 +420,15 @@ def find_zp_deep_mosaic(target, channel, data_dir=''):
     filtered_diff1 = sigma_clip(diff1, sigma=3, iters=5)
     filtered_diff2 = sigma_clip(diff2, sigma=3, iters=5)
 
+    zp = np.mean(filtered_diff2)
+    zp_er = np.std(filtered_diff2)
 
-    mp.plot(ap_mags, diff2, 'ro')
-    mp.plot(ap_mags, filtered_diff2, 'o')
+    #mp.plot(ap_mags, diff2, 'ro')
+    fig, ax = mp.subplots(1)
+    ax.plot(ap_mags, filtered_diff2, 'o')
+    ax.axhline(zp, color='k')
+    ax.axhline(zp+zp_er, color='k', alpha=0.5)
+    ax.axhline(zp-zp_er, color='k', alpha=0.5)
     mp.show()
     print np.mean(filtered_diff1), np.std(filtered_diff1)
     print np.mean(filtered_diff2), np.std(filtered_diff2)
@@ -430,7 +436,7 @@ def find_zp_deep_mosaic(target, channel, data_dir=''):
     psf_stars = ids
     print 'There are {} psf stars.'.format(len(psf_stars))
 
-    return np.mean(filtered_diff2), np.std(filtered_diff2)
+    return zp, zp_er
 
 def apply_calibration_bcds(target, channel, zp, data_dir='', mosaics=0):
 
@@ -563,9 +569,10 @@ def find_lst_stars(target, channel, data_dir='', mosaics=0):
         psf_star_cmags[idx] = cmag
         psf_star_id[idx] = match_id
         neigh_dists[idx] = neighbor_dists
-        print match_id, neighbor_ids
+        #print match_id, neighbor_ids
+
     # we only need this step if it wasn't already done.
-    if mosaics == 0:
+    if mosaics == 1:
         # make coo file for deep mosaic
         coo_mosaic = re.sub('_dn.lst', '.coo', lst_file)
         f_handle = open(coo_mosaic, 'w')
@@ -625,7 +632,7 @@ def find_lst_stars(target, channel, data_dir='', mosaics=0):
             f_handle.close()
 
 
-def do_ap_phot(target, channel, exptime, data_dir='', dao_dir='', mosaics=0):
+def do_ap_phot(target, channel, exptime, data_dir='', dao_dir='', mosaics=0, opt_dir='/Volumes/Annie/CRRP/OPTfiles/'):
 
     # list original [in flux units] fits files
     if mosaics == 0:
@@ -635,7 +642,7 @@ def do_ap_phot(target, channel, exptime, data_dir='', dao_dir='', mosaics=0):
     deep_mosaic = target+'_'+channel+'_deep.fits'
 
     # copy appropriate OPT files for invidual BCDs
-    opt_dir = data_dir+'../OPTfiles/'
+
     if mosaics == 0:
         daophot_setup.set_opt_files(opt_dir, channel, exptime, warm=1)
     if mosaics == 1:
@@ -665,7 +672,7 @@ def do_ap_phot(target, channel, exptime, data_dir='', dao_dir='', mosaics=0):
     daophot.close(force=True)
 
     # only need to do this if is isn't already done
-    if mosaics == 0:
+    if mosaics == 1:
         os.chdir(data_dir+'/DeepMosaic')
         print 'Changed directory to DeepMosaic\n'
         # Now do aperture photometry on the deep mosaic
@@ -691,6 +698,7 @@ def do_ap_phot(target, channel, exptime, data_dir='', dao_dir='', mosaics=0):
         daophot.expect('Command:')
         daophot.sendline('exit')
         daophot.close(force=True)
+        os.chdir(data_dir)
 
 
 def get_flux_ratio(channel, pixel_distance):
