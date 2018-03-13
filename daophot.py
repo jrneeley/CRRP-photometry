@@ -8,30 +8,26 @@ import shutil
 from astropy.io import fits
 import sys
 
-def init_phot(dao_dir, target, fitsfile, mosaics=0):
+def init_phot(dao_dir, fitsfile):
 
-	temp=re.sub(".fits","", fitsfile)
+	image = re.sub(".fits","", fitsfile)
 
 ## Clean up previous runs
 
 	extensions = ['.coo', '.lst', '.psf', '.nei', '.ap', '.als', 's.coo', 's.ap', '.srt', '.cmb', 's.fits', '.als']
     	for ext in extensions:
-    		if (os.path.isfile(temp + ext)):
-        		os.remove(temp+ext)
-	if mosaics == 0: image = re.sub('data/',target+':', temp)
-	if mosaics == 1: image = re.sub('mosaics/', target+'m:', temp)
-#	print "Working on " + image
-
+    		if (os.path.isfile(image + ext)):
+        		os.remove(image+ext)
 ## Running daophot
 
 	daophot = pexpect.spawn(dao_dir+'daophot')
 	#daophot.logfile = sys.stdout
 
-# attach the image
+# ATTACH
 	daophot.expect("Command:")
 	daophot.sendline("at " + image)
 
-# find the stars
+# FIND
 	daophot.expect("Command:")
 	daophot.sendline("find")
 	daophot.expect("Number of frames averaged, summed:")
@@ -43,7 +39,7 @@ def init_phot(dao_dir, target, fitsfile, mosaics=0):
 
 #	print "FIND complete"
 
-## Aperture photometry
+## PHOT
 	daophot.expect("Command:")
 	daophot.sendline("phot")
 	daophot.expect("File with aperture radii")

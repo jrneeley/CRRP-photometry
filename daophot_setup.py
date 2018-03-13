@@ -27,35 +27,26 @@ def spitzer_flux2dn(image, newname="", exptime=None, fluxconv=None):
 	scidata *= exptime/fluxconv
 
 
-def set_opt_files(opt_dir, channel, exptime, warm=1):
+def set_opt_files(opt_dir, channel, exptime, warm=1, mosaic=1):
 
 	if warm == 1:
 		opt_dir2 = opt_dir+'warm/'
 	if warm == 0:
 		opt_dir2 = opt_dir+'cryo/'
 
-	if (channel == 'I1'):
-		optfile = opt_dir2+'ch1-'+str(exptime)+'s.opt'
-	if (channel == 'I2'):
-		optfile = opt_dir2+'ch2-'+str(exptime)+'s.opt'
+	if channel == 'I1':
+		ch = 'ch1'
+	if channel == 'I2':
+		ch = 'ch2'
+	if mosaic == 1:
+		ext = 's-mosaic.opt'
+	if mosaic == 0:
+		ext = 's.opt'
+	optfile = opt_dir2+ch+'-'+str(exptime)+ext
+
 	shutil.copy(optfile, 'daophot.opt')
 	shutil.copy(opt_dir+'photo.opt', 'photo.opt')
 	shutil.copy(opt_dir+'allstar.opt', 'allstar.opt')
-	shutil.copy(opt_dir+'allframe.opt', 'allframe.opt')
-
-def set_opt_files_mosaic(opt_dir, channel, exptime, warm=1):
-
-	if warm == 0:
-		opt_dir2 = opt_dir+'cryo/'
-	if warm == 1:
-		opt_dir2 = opt_dir+'warm/'
-	if (channel == 'I1'):
-		optfile = opt_dir2+'ch1-'+str(exptime)+'s-mosaic.opt'
-	if (channel == 'I2'):
-		optfile = opt_dir2+'ch2-'+str(exptime)+'s-mosaic.opt'
-	shutil.copy(optfile, 'daophot.opt')
-	shutil.copy(opt_dir+'photo-mosaic.opt', 'photo.opt')
-	shutil.copy(opt_dir+'allstar-mosaic.opt', 'allstar.opt')
 	shutil.copy(opt_dir+'allframe.opt', 'allframe.opt')
 
 def find_fields(image_list, channel):

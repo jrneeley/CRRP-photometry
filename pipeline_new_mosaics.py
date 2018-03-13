@@ -9,12 +9,8 @@ import re
 import allstar
 import daomatch_crrp
 import daomaster_crrp
-#import coordinates
-#import optical
 import numpy as np
 import os
-#import deep_phot
-#import pexpect
 
 target = sys.argv[1]
 channel = sys.argv[2]
