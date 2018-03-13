@@ -8,7 +8,7 @@ import os
 import sys
 import optical
 import coordinates
-sys.path.insert(0, '/Users/Jill/python/daophot-tools/')
+#sys.path.insert(0, '/Users/Jill/python/daophot-tools/')
 import daomatch
 import daomaster
 import read_dao
@@ -92,7 +92,7 @@ def match_optical(target, channel, data_dir='', optical_dir='/Volumes/Annie/CRRP
     ymax = np.max(data['y'])
 
     print "Calculating optical boundaries..."
-
+    print xmin, xmax, ymin, ymax
     ra1, ra2, dec1, dec2 = coordinates.find_coord_window_mosaic(deep_mosaic_fits, xmin, xmax, ymin, ymax)
     print ra1, ra2, dec1, dec2
     min_x, min_y = coordinates.radec2catalogpix(ra1, dec1, catalog_x, catalog_y, catalog_ra, catalog_dec)
@@ -116,7 +116,7 @@ def match_optical(target, channel, data_dir='', optical_dir='/Volumes/Annie/CRRP
     image_list = ['optical:'+target+'-I.mag', als_file]
     mch_file = 'op-'+channel+'.mch'
     daomatch.daomatch(image_list, mch_file, dao_dir=dao_dir, xy_limits=limits)
-    daomaster.daomaster(mch_file, dao_dir='/usr/local/phot/', frame_num='1,0.5,1')
+    daomaster.daomaster(mch_file, dao_dir=dao_dir, frame_num='1,0.5,1')
     os.chdir(curr_dir)
 
 def check_match(target, channel, optical_dir='/Volumes/Annie/CRRP/OpticalCatalogs/', data_dir=''):
@@ -145,7 +145,9 @@ def check_match(target, channel, optical_dir='/Volumes/Annie/CRRP/OpticalCatalog
 
 
     # Add transformed catalogs
-    ids, x, y, mag, err = read_dao.read_alf(data_dir+'DeepMosaic/'+target+'_'+channel+'_deep_dn.als')
+    data = read_dao.read_alf(data_dir+'DeepMosaic/'+target+'_'+channel+'_deep_dn.als')
+    x = data['x']
+    y = data['y']
 
     files, x_off, y_off, transform, dof = read_dao.read_mch(data_dir+'DeepMosaic/op-'+channel+'.mch')
 

@@ -8,7 +8,7 @@ import os
 import optical
 import coordinates
 from astropy.io import fits
-import progressbar
+#import progressbar
 from time import sleep
 
 
@@ -38,8 +38,8 @@ def make_mir_catalog(channels, target, dao_ids, data_dir=''):
             ('psf_mag', float, len(file_list)), ('psf_err', float, len(file_list))])
 
         phot_data['id'] = dao_ids
-        bar = progressbar.ProgressBar(maxval=len(file_list), \
-            widgets=[progressbar.Bar('=', '[',']'), ' ', progressbar.Percentage()])
+#        bar = progressbar.ProgressBar(maxval=len(file_list), \
+#            widgets=[progressbar.Bar('=', '[',']'), ' ', progressbar.Percentage()])
         bar.start()
         for ind in range(0,len(file_list)):
 

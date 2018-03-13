@@ -2,132 +2,82 @@
 
 import sys
 import pexpect
-import re
-import glob
-import os
-import coordinates
+import read_dao
+import matplotlib.pyplot as mp
+import numpy as np
 
-def daomatch_init(dao_dir, channel, target, fields, num_fields):
+# run daomatch on a list of images
+def daomatch(image_list, output_file, dao_dir='/apps/daophot32/',
+                    xy_limits=None, force_scale_rot=0, force_scale=0):
 
-## Clean up previous runs
-    extensions = ['*[0-9].mch']
-    for ext in extensions:
-        if (os.path.isfile(channel+'_field'+ ext)):
-            os.remove(channel+'_field'+ ext)
-
-    for ind in range(0,num_fields):
-        img_list = list(fields[ind])
-        for ii in range(0,len(img_list)):
-            img_list[ii] = re.sub("data/", target+":", img_list[ii])
-            img_list[ii] = re.sub('.fits', '_dn.als', img_list[ii])
-## run DAOMATCH on on fields
-        daomatch = pexpect.spawn(dao_dir+'daomatch')
-        daomatch.logfile = sys.stdout
-
-        daomatch.expect("Master input file")
-        first_file = img_list[0]
-        daomatch.sendline(first_file)
-        daomatch.expect("Output file")
-        daomatch.sendline(channel+"_field"+str(ind+1)+".mch")
-        for image in img_list:
-            if image == first_file:
-                continue
-            daomatch.expect("Next input file")
-            daomatch.sendline(image+";") # / forces scale to be 1
-        daomatch.expect("Next input file")
-        daomatch.sendline("")
-        daomatch.expect("Good bye")
-        daomatch.close()
-
-def daomatch_mosaic(dao_dir, channel, target, image_list):
-
-## Clean up previous runs
-    mch_file = channel+'_mosaic.mch'
-    if (os.path.isfile(mch_file)):
-        os.remove(mch_file)
-
-
-    img_list = list(image_list)
-    for ind, img in enumerate(image_list):
-        img_list[ind] = re.sub("mosaics/", target+"m:", img)
-        img_list[ind] = re.sub('.fits', '.als', img_list[ind])
 ## run DAOMATCH on on fields
     daomatch = pexpect.spawn(dao_dir+'daomatch')
     daomatch.logfile = sys.stdout
 
     daomatch.expect("Master input file")
-    first_file = img_list[0]
-    daomatch.sendline(first_file)
+    first_file = image_list[0]
+    if xy_limits != None:
+        daomatch.sendline(first_file+'*')
+        daomatch.expect('Ymin, Ymax')
+        daomatch.sendline(xy_limits)
+    if xy_limits == None:
+        daomatch.sendline(first_file)
     daomatch.expect("Output file")
-    daomatch.sendline(channel+"_mosaic.mch")
-    for image in img_list:
+    daomatch.sendline(output_file)
+    check = daomatch.expect(["Next input file", "New output file"])
+    if check == 1:
+        daomatch.sendline("")
+
+    # define appropriate suffix for images
+    suffix = ''
+    if force_scale_rot == 1:
+        suffix = ';'
+    if force_scale != 0:
+        suffix = '/'+str(force_scale)
+    if xy_limits != None:
+        suffix += '!'
+
+    for image in image_list:
         if image == first_file:
             continue
-        daomatch.expect("Next input file")
-        daomatch.sendline(image+";") # / forces scale to be 1
-    daomatch.expect("Next input file")
+#            if check == 0:
+        daomatch.sendline(image+suffix)
+        check = daomatch.expect(["Next input file", "Write this transformation"])
+
+        if check == 1:
+            daomatch.sendline('y')
+        if check == 0:
+            continue
+#            daomatch.expect('Next input file')
+#            daomatch.sendline(image+suffix)
+
+#    daomatch.expect("Next input file")
     daomatch.sendline("")
     daomatch.expect("Good bye")
     daomatch.close()
 
-def deep_mosaic(dao_dir, mosaic, target, bcd_list, channel='', mosaics=0):
 
-## Clean up previous runs
+def check_daomatch(mch_file):
 
-#    mosaic = target+'_'+channel+'_deep_dn.fits'
-    if mosaics == 0: first_file = re.sub('.fits', '_dn.als', mosaic)
-    if mosaics == 1: first_file = re.sub('.fits', '_dn.alf', mosaic)
-    for bcd in bcd_list:
-        extensions = ['.mch']
-        for ext in extensions:
-            if (os.path.isfile('temp'+ext)): os.remove('temp'+ext)
-        if mosaics == 0:
-            next_bcd = re.sub("data/", target+":", bcd)
-            next_bcd = re.sub('.fits', '.als', next_bcd)
-            bcd2 = re.sub('data/', '../data/', bcd)
-        if mosaics == 1:
-            next_bcd = re.sub("mosaics/", target+"m:", bcd)
-            next_bcd = re.sub('.fits', '.als', next_bcd)
-            bcd2 = re.sub('mosaics/', '../mosaics/', bcd)
-        xmin, xmax, ymin, ymax = coordinates.find_deep_mos_coords(mosaic, bcd2)
-        limits = '{:.2f}, {:.2f}, {:.2f}, {:.2f}'.format(xmin, xmax, ymin, ymax)
-        ## run DAOMATCH on this file
-        daomatch = pexpect.spawn(dao_dir+'daomatch')
-        daomatch.logfile = sys.stdout
-        daomatch.expect("Master input file")
-        if mosaics == 0:
-            daomatch.sendline(first_file+'*')
-            daomatch.expect('Ymin, Ymax')
-            daomatch.sendline(limits)
-        if mosaics == 1:
-            daomatch.sendline(first_file)
-        daomatch.expect("Output file")
-        daomatch.sendline('temp.mch')
-        check = daomatch.expect(["Next input file", "Write this transformation"])
-        if check == 0: daomatch.sendline(next_bcd+'!') # ! turns off x,y prompts
-        if check == 1: daomatch.sendline('y')
-        daomatch.expect("Next input file")
-        daomatch.sendline("")
-        daomatch.expect("Good bye")
-        daomatch.close()
+    img_list, x_offsets, y_offsets, transform, dof = read_dao.read_mch(mch_file)
 
-        if mosaics == 0: mosaic_mch = re.sub('.als', '.mch', first_file)
-        if mosaics == 1: mosaic_mch = channel+'_mosaics.mch'
+    n_imgs = len(img_list)
+    master_frame = read_dao.read_alf(img_list[0])
 
-        if bcd == bcd_list [0]:
-            f = open(mosaic_mch, 'w')
-            f2 = open('temp.mch', 'r')
-            line1 = f2.readline()
-            line2 = f2.readline()
-            f.write(line1)
-            f.write(line2)
-            f.close()
-            f2.close()
-        else:
-            f = open(mosaic_mch, 'a')
-            f2 = open('temp.mch', 'r')
-            line1 = f2.readline()
-            line2 = f2.readline()
-            f.write(line2)
-            f.close()
-            f2.close()
+    master_order = np.argsort(master_frame['mag'])
+    master_brightest = master_order[0:100]
+
+    for ind in range(1,n_imgs):
+        fig = mp.figure(figsize=(10,8))
+        ax1 = fig.add_subplot(111)
+        ax1.plot(master_frame['x'][master_brightest], master_frame['y'][master_brightest], 'b.', alpha=0.5, markersize=15)
+        data = read_dao.read_alf(img_list[ind])
+        data_order = np.argsort(data['mag'])
+        data_brightest = data_order[0:100]
+        x_new = float(x_offsets[ind]) + float(transform[ind][0])*data['x'] + float(transform[ind][1])*data['y']
+        y_new = float(y_offsets[ind]) + float(transform[ind][2])*data['x'] + float(transform[ind][3])*data['y']
+        ax1.plot(x_new[data_brightest], y_new[data_brightest], 'r.', alpha=0.5, markersize=15)
+        ax1.set_title(img_list[ind])
+        ax1.set_xlabel('x')
+        ax1.set_ylabel('y')
+        mp.show()

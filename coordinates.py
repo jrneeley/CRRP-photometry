@@ -57,21 +57,14 @@ def find_coord_window_mosaic(img, xmin, xmax, ymin, ymax):
 # Convert celestial coordinates to pixels using optical catalog
 def radec2catalogpix(ra_in, dec_in, catalog_x, catalog_y, catalog_ra, catalog_dec):
 
-    index_x = np.searchsorted(catalog_ra, ra_in)
-    catalog_dec2 = np.sort(catalog_dec)
-    catalog_y2 = catalog_y[np.argsort(catalog_dec)]
-    index_y = np.searchsorted(catalog_dec2, dec_in)
+    ra_diff = np.abs(catalog_ra - ra_in)
+    dec_diff = np.abs(catalog_dec - dec_in)
+    index_x = np.argmin(ra_diff)
+    index_y = np.argmin(dec_diff)
 
     target_x = catalog_x[index_x]
-#    if index_x == len(ra):
-#        cat_xmax = x[index_xmax-1]
-#    else:
-#        cat_xmax = x[index_xmax]
-    target_y = catalog_y2[index_y]
-#    if index_ymax == len(dec2):
-#        cat_ymax = y2[index_ymax-1]
-#    else:
-#        cat_ymax = y2[index_ymax]
+
+    target_y = catalog_y[index_y]
 
     return(target_x, target_y)
 

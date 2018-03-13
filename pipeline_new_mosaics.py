@@ -7,14 +7,14 @@ import shutil
 import daophot
 import re
 import allstar
-import daomatch
-import daomaster
-import coordinates
-import optical
+import daomatch_crrp
+import daomaster_crrp
+#import coordinates
+#import optical
 import numpy as np
 import os
-import deep_phot
-import pexpect
+#import deep_phot
+#import pexpect
 
 target = sys.argv[1]
 channel = sys.argv[2]
@@ -120,12 +120,12 @@ if (start <=3):
 ## Run DAOMATCH
 ## You may want to check the .mch files after this step
 	print '\nRunning DAOMATCH/DAOAMASTER between deep mosaic and individual epoch mosaics...'
-	daomatch.deep_mosaic(dao_dir, deep_mosaic_fits, target, dn_list, channel=channel, mosaics=1)
+	daomatch_crrp.deep_mosaic(dao_dir, deep_mosaic_fits, target, dn_list, channel=channel, mosaics=1)
 	print "DAOMATCH complete."
 
 ## Run DAOMASTER
 	mch_file = channel+'_mosaics.mch'
-	daomaster.deep_mosaic(dao_dir, mch_file, mosaics=1)
+	daomaster_crrp.deep_mosaic(dao_dir, mch_file, mosaics=1)
 	print 'DAOMASTER complete.\n'
 
 

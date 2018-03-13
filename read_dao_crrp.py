@@ -64,7 +64,7 @@ def read_mch(mch_file):
             file_list.append(file_name[1])
         x_offset.append(temp[2])
         y_offset.append(temp[3])
-        transform_matrix.append(temp[4:-2])
+        transform_matrix.append(temp[4:n])
     dof = len(transform_matrix[1])
 
     return file_list, x_offset, y_offset, transform_matrix, dof
@@ -107,7 +107,7 @@ def read_alf(alf_file):
     err = data['err']
 
 
-    return data
+    return ids, x, y, mag, err
 
 def read_coo_new(coo_file):
 
