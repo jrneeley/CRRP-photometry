@@ -6,57 +6,57 @@ import shutil
 from astropy.io import fits
 import sys
 import matplotlib.pyplot as mp
+import config
 
+def daophot(fitsfile):
 
-def daophot(dao_dir, fitsfile):
-
-	image = re.sub(".fits","", fitsfile)
+    dao_dir = config.dao_dir
+    image = re.sub(".fits","", fitsfile)
 
 ## Clean up previous runs
 
-	extensions = ['.coo', '.lst', '.psf', '.nei', '.ap', '.als', 's.coo', 's.ap', '.srt', '.cmb', 's.fits', '.als']
-    	for ext in extensions:
-    		if (os.path.isfile(image + ext)):
-        		os.remove(image+ext)
+    extensions = ['.coo', '.lst', '.psf', '.nei', '.ap', '.als', 's.coo', 's.ap', '.srt', '.cmb', 's.fits', '.als']
+    for ext in extensions:
+        if (os.path.isfile(image + ext)):
+            os.remove(image+ext)
 ## Running daophot
-
-	daophot = pexpect.spawn(dao_dir+'daophot')
+    daophot = pexpect.spawn(dao_dir+'daophot')
 	#daophot.logfile = sys.stdout
 
 # ATTACH
-	daophot.expect("Command:")
-	daophot.sendline("at " + image)
+    daophot.expect("Command:")
+    daophot.sendline("at " + image)
 
 # FIND
-	daophot.expect("Command:")
-	daophot.sendline("find")
-	daophot.expect("Number of frames averaged, summed:")
-	daophot.sendline("1,1")
-	daophot.expect("File for positions")
-	daophot.sendline("")
-	daophot.expect("Are you happy with this?")
-	daophot.sendline("y")
+    daophot.expect("Command:")
+    daophot.sendline("find")
+    daophot.expect("Number of frames averaged, summed:")
+    daophot.sendline("1,1")
+    daophot.expect("File for positions")
+    daophot.sendline("")
+    daophot.expect("Are you happy with this?")
+    daophot.sendline("y")
 
 #	print "FIND complete"
 
 ## PHOT
-	daophot.expect("Command:")
-	daophot.sendline("phot")
-	daophot.expect("File with aperture radii")
-	daophot.sendline("")
-	daophot.expect("PHO>")
-	daophot.sendline("")
-	daophot.expect("Input position file")
-	daophot.sendline(image + '.coo')
-	daophot.expect("Output file")
-	daophot.sendline(image + '.ap')
+    daophot.expect("Command:")
+    daophot.sendline("phot")
+    daophot.expect("File with aperture radii")
+    daophot.sendline("")
+    daophot.expect("PHO>")
+    daophot.sendline("")
+    daophot.expect("Input position file")
+    daophot.sendline(image + '.coo')
+    daophot.expect("Output file")
+    daophot.sendline(image + '.ap')
 
 #	print "PHOT complete"
 
 ## Exit Daophot
-	daophot.expect("Command:")
-	daophot.sendline("exit")
-	daophot.close(force=True)
+    daophot.expect("Command:")
+    daophot.sendline("exit")
+    daophot.close(force=True)
 
 #print "Initial aperture photometry complete."
 

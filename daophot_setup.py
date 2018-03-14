@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as mp
 import sys
 from matplotlib.ticker import ScalarFormatter
+import config
 
 def folder_setup():
 	daophot_dir = raw_input("Enter path to Daophot executables: ")
@@ -27,8 +28,9 @@ def spitzer_flux2dn(image, newname="", exptime=None, fluxconv=None):
 	scidata *= exptime/fluxconv
 
 
-def set_opt_files(opt_dir, channel, exptime, warm=1, mosaic=1):
+def set_opt_files(channel, exptime, warm=1, mosaic=1):
 
+	opt_dir = config.opt_dir
 	if warm == 1:
 		opt_dir2 = opt_dir+'warm/'
 	if warm == 0:

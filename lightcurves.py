@@ -1,7 +1,7 @@
 import numpy as np
 import re
 import glob
-import read_dao
+import dao
 from astropy.io import fits
 import matplotlib.pyplot as mp
 from astropy.stats import LombScargle
@@ -14,16 +14,14 @@ import os.path
 import peakutils
 from astropy.stats import sigma_clip
 from IPython import display
+import config
 
+def make_lcv(target, channels, stars, dao_ids):
 
-def make_lcv(channels, stars, dao_ids, data_dir='', mosaics=0):
+    data_dir = config.top_dir+target
 
-    if mosaics == 0:
-        lcv_folder = data_dir+'lcvs/mir/'
-        img_folder = data_dir+'data/'
-    if mosaics == 1:
-        lcv_folder = data_dir+'lcvs/'
-        img_folder = data_dir+'mosaics/'
+    lcv_folder = data_dir+'/lcvs/mir/'
+    img_folder = data_dir+'/mosaics/'
 
     for channel in channels:
         file_list = glob.glob(img_folder+channel+'*.cal')
@@ -41,7 +39,7 @@ def make_lcv(channels, stars, dao_ids, data_dir='', mosaics=0):
 
         for ind in range(0,len(file_list)):
 
-            alf_id, x, y, alf_mag, alf_err = read_dao.read_alf(file_list[ind])
+            alf_data = dao.read_alf(file_list[ind])
             fits_file = re.sub(".cal",".fits", file_list[ind])
             if fits_file == file_list[ind]:
                 fits_file = re.sub(".alf", ".fits", file_list[ind])
@@ -51,22 +49,20 @@ def make_lcv(channels, stars, dao_ids, data_dir='', mosaics=0):
             mjd = prihdr['mjd_obs']
 
             for ind2 in range(0,len(dao_ids)):
-                alf_match = np.argwhere(alf_id == dao_ids[ind2])
-                if mosaics == 0:
-                    trash1, aor_num, frame_num, trash2 = file_list[ind].split('_')
-        #        trash1, aor_num, trash2 = alf_list[ind].split('_')
-                if mosaics == 1:
-                    trash, aor_num, trash = file_list[ind].split('_')
-                    frame_num = 1
+                alf_match = np.argwhere(alf_data['id'] == dao_ids[ind2])
+
+                trash, aor_num, trash = file_list[ind].split('_')
+                frame_num = 1
+
                 phot_data['aor'][ind2,ind] = int(aor_num)
                 phot_data['f_num'][ind2, ind] = int(frame_num)
                 phot_data['mjd'][ind2,ind] = mjd
                 phot_data['filter'][ind2, ind] = channel
                 if len(alf_match):
-                    phot_data['x'][ind2,ind] = x[alf_match]
-                    phot_data['y'][ind2,ind] = y[alf_match]
-                    phot_data['psf_mag'][ind2, ind] = alf_mag[alf_match]
-                    phot_data['psf_err'][ind2, ind] = alf_err[alf_match]
+                    phot_data['x'][ind2,ind] = alf_data['x'][alf_match]
+                    phot_data['y'][ind2,ind] = alf_data['y'][alf_match]
+                    phot_data['psf_mag'][ind2, ind] = alf_data['mag'][alf_match]
+                    phot_data['psf_err'][ind2, ind] = alf_data['err'][alf_match]
                 else:
                     phot_data['x'][ind2,ind] = float('NaN')
                     phot_data['y'][ind2,ind] = float('NaN')

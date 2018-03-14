@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import read_dao
+import dao
 import matplotlib.pyplot as mp
 import numpy as np
 import optical
@@ -15,6 +15,7 @@ from astropy.stats import sigma_clip
 import daophot_setup
 import pexpect
 import os
+import config
 
 
 
@@ -95,184 +96,14 @@ def find_stars_in_cat(optical_dir, target, channel, data_dir=''):
             comments='', fmt='%8i %2i %7.3f %7.3f %6.3f %6.4f')
 
 
+def find_zp_single_epoch(target, channel):
 
+    data_dir = config.top_dir+target
 
-def find_zp_old(channel, verbose=0, data_dir=''):
+    fits_list = glob.glob(data_dir+'/mosaics/'+channel+'*[0-9].fits')
 
-    phot_list = glob.glob(data_dir+'cal_stars/'+channel+'*.phot')
-
-    n_stars = len(phot_list)
-    zp = np.zeros(n_stars)
-    zp_er = np.zeros(n_stars)
-    avg_mag = np.zeros(n_stars)
-    avg_mag_er = np.zeros(n_stars)
-    id_num = np.zeros(n_stars, dtype=int)
-    ra = np.zeros(n_stars)
-    dec = np.zeros(n_stars)
-    num_neighbors = np.zeros(n_stars, dtype=int)
-    for ind, phot in enumerate(phot_list):
-
-
-        f = open(phot, 'r')
-        header = f.readline()
-        f.close()
-        head1, head2, head3, head4 = header.split()
-
-        id_num[ind] = int(head1)
-        ra[ind] = float(head2)
-        dec[ind] = float(head3)
-        num_neighbors[ind] = int(head4)
-
-        dtype1 = np.dtype([('psf_mag',float), ('psf_err', float),
-            ('ap_mag', float), ('ap_err', float)])
-        data = np.loadtxt(phot, dtype=dtype1, usecols=(4,5,6,7), skiprows=1)
-
-        if np.all(np.isnan(data['ap_mag'])) :
-            zp[ind] = float('NaN')
-            zp_er[ind] = float('NaN')
-            avg_mag[ind] = float('NaN')
-            avg_mag_er[ind] = float('NaN')
-            continue
-        median_ap = np.nanmedian(data['ap_mag'])
-        mean_ap = np.nanmean(data['ap_mag'])
-        median_psf = np.nanmedian(data['psf_mag'])
-        mean_psf = np.nanmean(data['psf_mag'])
-        std_ap = np.nanstd(data['ap_mag'])
-        std_psf = np.nanstd(data['psf_mag'])
-
-        filtered_ap = np.array(data['ap_mag'])
-        filtered_psf = np.array(data['psf_mag'])
-        filtered_ap_er = np.array(data['ap_err'])
-        filtered_psf_er = np.array(data['psf_err'])
-        for i in range(5):
-            outliers_ap = np.argwhere(abs(filtered_ap - mean_ap) > 3*std_ap)
-            filtered_ap[outliers_ap] = float('NaN')
-            filtered_ap_er[outliers_ap] = float('NaN')
-            mean_ap = np.nanmean(filtered_ap)
-            std_ap = np.nanstd(filtered_ap)
-            outliers_psf = np.argwhere(abs(filtered_psf - mean_psf) > 3*std_psf)
-            filtered_psf[outliers_psf] = float('NaN')
-            filtered_psf_er[outliers_psf] = float('NaN')
-            mean_psf = np.nanmean(filtered_psf)
-            std_psf = np.nanstd(filtered_psf)
-
-        # Show aperture photometry and PSF photometry for all stars
-        if verbose == 1:
-            f, axarr = mp.subplots(2, sharex=True)
-            axarr[0].plot(data['ap_mag'], 'ro')
-            axarr[0].plot(filtered_ap, 'bo')
-            axarr[1].plot(data['psf_mag'], 'ro')
-            axarr[1].plot(filtered_psf, 'bo')
-            axarr[1].set_xlabel('Observation number')
-            axarr[1].set_ylabel('PSF mag')
-            axarr[0].set_ylabel('Aperture mag')
-            axarr[0].set_ylim(np.nanmax(data['ap_mag'])+0.05, np.nanmin(data['ap_mag'])-0.05)
-            axarr[1].set_ylim(np.nanmax(data['psf_mag'])+0.05, np.nanmin(data['psf_mag'])-0.05)
-            mp.show()
-
-        residual = filtered_ap - filtered_psf
-        res_err = np.sqrt( filtered_ap_er**2 + filtered_psf_er**2)
-        # Show residuals for each bcd for all stars
-    #    mp.errorbar(np.arange(len(residual)), residual, yerr=res_err , fmt='o')
-    #    mp.show()
-        zp[ind] = np.nanmean(residual)
-        zp_er[ind] = np.nanstd(residual)
-        avg_mag[ind] = mean_ap
-        avg_mag_er[ind] = std_ap
-
-
-
-    mp.errorbar(avg_mag, zp, yerr=zp_er, fmt='o', color='r')
-    mp.xlabel('Aperture mag')
-    mp.ylabel('Aperture - PSF mag')
-    mp.savefig(data_dir+channel+'-raw-zp.eps', format='eps')
-#    mp.show()
-    mp.gcf().clear()
-
-    f, ax = mp.subplots(2)
-    ax[0].plot(num_neighbors, zp, 'ro')
-    ax[0].set_xlabel('Number of neighbors')
-    ax[0].set_ylabel('ZP')
-    ax[1].plot(zp_er, zp, 'ro')
-    ax[1].set_xlabel('ZP error')
-    ax[1].set_ylabel('ZP')
-    mp.savefig(data_dir+channel+'-quality-check.eps', format='eps')
-    mp.show()
-    mp.gcf().clear()
-#    mp.show()
-    neighbor_threshold = input('Maximum number of neighbors?: ')
-    error_threshold = input('Maximum standard deviation?:')
-
-    good_values = np.argwhere((num_neighbors < neighbor_threshold) &
-        (zp_er < error_threshold)).flatten()
-    good_zp = zp[good_values]
-    good_zp_er = zp_er[good_values]
-    good_avg_mag = avg_mag[good_values]
-
-    remo=[0]
-    while len(remo):
-        mean_zp = np.nanmean(good_zp)
-        std_zp = np.nanstd(good_zp)
-        remo = (abs(good_zp - mean_zp) > 2*std_zp).nonzero()[0]
-        good_zp = np.delete(good_zp, remo)
-        good_zp_er = np.delete(good_zp_er, remo)
-        good_avg_mag = np.delete(good_avg_mag, remo)
-    print str(len(good_zp))+' final calibration stars.'
-    print 'Mean, median zero point and standard deviation:'
-    print np.nanmean(good_zp), np.nanmedian(good_zp), np.nanstd(good_zp)
-    #mp.plot(avg_mag, zp, 'ro', good_avg_mag, good_zp, 'bo')
-    mp.errorbar(avg_mag, zp, yerr=zp_er, fmt='o', color='r')
-    mp.errorbar(good_avg_mag, good_zp, yerr=good_zp_er, fmt='o', color='b')
-    mp.axhline(np.nanmean(good_zp))
-#    liney = [np.nanmean(good_zp), np.nanmean(good_zp)]
-#    mp.plot(linex, liney, 'k-')
-    mp.ylabel('Aperture - PSF')
-    mp.xlabel('Aperture mag')
-#    mp.show()
-    mp.savefig(data_dir+channel+'-final-zp.eps', format='eps')
-    mp.gcf().clear()
-#    mp.plot(avg_mag, zp_er, 'ro', good_avg_mag, good_zp_er, 'bo')
-#    mp.show()
-def find_zp_single_frame_old(infile):
-
-
-    dtype1 = np.dtype([('id', int), ('x', float), ('y', float), ('ap_mag', float),
-        ('ap_er', float), ('psf_mag', float), ('psf_er', float)])
-    data = np.loadtxt(infile, dtype = dtype1)
-
-    bad_phot = (data['ap_mag'] < 0).nonzero()[0]
-    bad_phot2 = (data['ap_mag'] > 30).nonzero()[0]
-    bad_phot = np.append(bad_phot, bad_phot2)
-    if len(bad_phot):
-        data['ap_mag'][bad_phot] = float('NaN')
-        data['ap_er'][bad_phot] = float('NaN')
-
-    zp = data['ap_mag'] - data['psf_mag']
-    zp_er = np.sqrt( data['ap_er']**2 + data['psf_er']**2 )
-
-    mean_zp = np.nanmean(zp)
-    std_zp = np.nanstd(zp)
-
-    remo = [0]
-    while len(remo):
-        remo = (abs(zp - mean_zp) > 2*std_zp).nonzero()[0]
-        zp[remo] = float('NaN')
-        zp_er[remo] = float('NaN')
-
-    print np.nanmean(zp), np.nanstd(zp)
-    mp.plot(data['ap_mag'], zp, 'ro')
-    mp.show()
-
-def find_zp_bcds(channel, data_dir='', mosaics=0):
-
-    if mosaics == 0:
-        fits_list = glob.glob(data_dir+'data/'+channel+'*[0-9].fits')
-        if channel == 'I1': zmag = 17.12
-        if channel == 'I2': zmag = 16.65
-    if mosaics == 1:
-        fits_list = glob.glob(data_dir+'mosaics/'+channel+'*[0-9].fits')
-        if channel == 'I1': zmag = 18.67
-        if channel == 'I2': zmag = 18.19
+    if channel == 'I1': zmag = 18.67
+    if channel == 'I2': zmag = 18.19
 
     diff1 = np.array([], dtype=float)
     diff2 = np.array([], dtype=float)
@@ -285,14 +116,14 @@ def find_zp_bcds(channel, data_dir='', mosaics=0):
         coo_file = re.sub('.fits', '.coo', img)
         ap_file = re.sub('.fits', '.ap', img)
 
-        ids, ap_phot, ap_err = read_dao.read_ap(ap_file)
+        ids, ap_phot, ap_err = dao.read_ap(ap_file)
         ap_phot = ap_phot - 25.0 + zmag
-        data = read_dao.read_coo_new(coo_file)
+        data = dao.read_coo_new(coo_file)
 
         diff1 = np.append(diff1, ap_phot - data['mag1'])
         diff2 = np.append(diff2, ap_phot - data['mag2'])
         err = np.append(err, np.sqrt(ap_err**2 + data['err']**2))
-        obs_num = np.append(obs_num, np.arange(len(diff1)))
+        obs_num = np.append(obs_num, np.arange(len(ids)))
         ap_mags = np.append(ap_mags, ap_phot)
         names = np.append(names, ids)
 
@@ -339,27 +170,26 @@ def find_zp_bcds(channel, data_dir='', mosaics=0):
     std_zp1 = np.zeros(len(psf_stars))
     std_zp2 = np.zeros(len(psf_stars))
     avg_mag = np.zeros(len(psf_stars))
+
     for ind, star in enumerate(psf_stars):
+
         x = obs_num[names == star]
         y3 = ap_mags[names == star]
         y1 = diff1[names == star]
         y2 = diff2[names == star]
         psf = y3 - y2
         filtered_y3 = sigma_clip(y3, sigma=2, iters=5)
-        if mosaics == 0:
-            mp.plot(filtered_y3, y1, 'ro')
-            mp.plot(filtered_y3, y2, 'bo')
-        if mosaics == 1:
-            mp.plot(y3, y1, 'ro')
-            mp.plot(y3, y2, 'bo')
+
+        mp.plot(y3, y1, 'ro')
+        mp.plot(y3, y2, 'bo')
         mp.xlabel('Aperture phot mag')
         mp.ylabel('Residual')
         mp.title(star)
         mp.show()
         ap_range = np.max(filtered_y3) - np.min(filtered_y3)
         psf_range = np.max(filtered_y3 - y2) - np.min(filtered_y3 - y2)
-        print ap_range, psf_range
-        print np.std(filtered_y3), np.std(filtered_y3 - y2)
+        #print ap_range, psf_range
+        #print np.std(filtered_y3), np.std(filtered_y3 - y2)
         avg_zp2[ind] = np.mean(y2[y3 == filtered_y3])
         avg_zp1[ind] = np.mean(y1[y3 == filtered_y3])
         std_zp1[ind] = np.std(y1[y3 == filtered_y3])
@@ -375,24 +205,28 @@ def find_zp_bcds(channel, data_dir='', mosaics=0):
     mp.ylabel('Zero point')
     mp.show()
 
-    print np.mean(filtered_avzp1), np.std(filtered_avzp1)
-    print np.mean(filtered_avzp2), np.std(filtered_avzp2)
+    #print np.mean(filtered_avzp1), np.std(filtered_avzp1)
+    #print np.mean(filtered_avzp2), np.std(filtered_avzp2)
+    zp = np.mean(filtered_avzp2)
+    err = np.std(filtered_avzp2)
+    print 'Calibration zp is {:.3f} +/- {:.3f}'.format(zp, err)
+    return zp, err
 
-    return np.mean(filtered_avzp2), np.std(filtered_avzp2)
+def find_zp_deep_mosaic(target, channel):
 
-def find_zp_deep_mosaic(target, channel, data_dir=''):
+    data_dir = config.top_dir+target
 
     if channel == 'I1': zmag = 18.67
     if channel == 'I2': zmag = 18.19
-    deep_mosaic = data_dir+'DeepMosaic/'+target+'_'+channel+'_deep.fits'
+    deep_mosaic = data_dir+'/DeepMosaic/'+target+'_'+channel+'_deep.fits'
 
 
     coo_file = re.sub('.fits', '.coo', deep_mosaic)
     ap_file = re.sub('.fits', '.ap', deep_mosaic)
 
-    ids, ap_mags, ap_err = read_dao.read_ap(ap_file)
+    ids, ap_mags, ap_err = dao.read_ap(ap_file)
     ap_mags = ap_mags - 25.0 + zmag
-    data = read_dao.read_coo_new(coo_file)
+    data = dao.read_coo_new(coo_file)
 
     diff1 = ap_mags - data['mag1']
     diff2 = ap_mags - data['mag2']
@@ -438,14 +272,14 @@ def find_zp_deep_mosaic(target, channel, data_dir=''):
 
     return zp, zp_er
 
-def apply_calibration_bcds(target, channel, zp, data_dir='', mosaics=0):
+def apply_calibration_single_epoch(target, channel, zp):
 
-    if mosaics == 0:
-        alf_list = glob.glob(data_dir+'data/'+channel+'*.alf')
-    if mosaics == 1:
-        alf_list = glob.glob(data_dir+'mosaics/'+channel+'*.alf')
 
-    alc_params = [0.98397385,-8.6387206e-05,3.6310403e-05,-5.6284359e-07,1.6023687e-06,1.3574380e-06]
+    data_dir = config.top_dir+target
+    alf_list = glob.glob(data_dir+'/mosaics/'+channel+'_*.alf')
+
+# Array location correction only applies to individual BCDs.
+#    alc_params = [0.98397385,-8.6387206e-05,3.6310403e-05,-5.6284359e-07,1.6023687e-06,1.3574380e-06]
 
     for alf in alf_list:
 
@@ -464,11 +298,8 @@ def apply_calibration_bcds(target, channel, zp, data_dir='', mosaics=0):
         flux = 10**(data['c4'] / -2.5)
         x = np.round(data['c2'])
         y = np.round(data['c3'])
-        if mosaics == 0:
-            alc = alc_params[0] + alc_params[1]*(x-127) + alc_params[2]*(y-127) + alc_params[3]*(x-127)*(y-127) + alc_params[4]*(x-127)**2 + alc_params[5]*(y-127)**2
-            cflux = flux/alc
-        if mosaics == 1:
-            cflux = flux
+
+        cflux = flux
 
         cmag = -2.5*np.log10(cflux)
         data['c4'] = cmag + zp
@@ -483,9 +314,10 @@ def apply_calibration_bcds(target, channel, zp, data_dir='', mosaics=0):
         np.savetxt(f, data, fmt='%7i %8.3f %8.3f %8.3f %8.4f %8.2f %8s %8.2f %8.3f')
         f.close()
 
-def apply_calibration_deep_mosaic(target, channel, zp, data_dir=''):
+def apply_calibration_deep_mosaic(target, channel, zp):
 
-    deep_alf = data_dir+'DeepMosaic/'+target+'_'+channel+'_deep_dn.alf'
+    data_dir = config.top_dir+target
+    deep_alf = data_dir+'/DeepMosaic/'+target+'_'+channel+'_deep_dn.alf'
 
 
     new_file = re.sub('.alf', '.cal', deep_alf)
@@ -515,18 +347,15 @@ def apply_calibration_deep_mosaic(target, channel, zp, data_dir=''):
     np.savetxt(f, data, fmt='%7i %8.3f %8.3f %8.3f %8.4f %8.2f %8s %8.2f %8.3f')
     f.close()
 
-def find_lst_stars(target, channel, data_dir='', mosaics=0):
+def find_lst_stars(target, channel):
 
-    lst_file = data_dir+'DeepMosaic/'+target+'_'+channel+'_deep_dn.lst'
-    alf_file = data_dir+'DeepMosaic/'+target+'_'+channel+'_deep_dn.alf'
+    deep_lst = 'DeepMosaic/'+target+'_'+channel+'_deep_dn.lst'
+    deep_alf = 'DeepMosaic/'+target+'_'+channel+'_deep_dn.alf'
 
-    if mosaics == 0:
-        alf_all_list = glob.glob(data_dir+'data/'+channel+'*.alf')
-    if mosaics == 1:
-        alf_all_list = glob.glob(data_dir+'mosaics/'+channel+'*.alf')
+    alf_all_list = glob.glob('mosaics/'+channel+'_*.alf')
 
-    id_init, x_init, y_init = read_dao.read_lst(lst_file)
-    id_alf, x_new, y_new, psf_mag, psf_err = read_dao.read_alf(alf_file)
+    id_init, x_init, y_init = dao.read_lst(deep_lst)
+    deep_alf_data = dao.read_alf(deep_alf)
 
     n_psf_stars = len(x_init)
     psf_stars = np.zeros(n_psf_stars, dtype=object)
@@ -539,16 +368,19 @@ def find_lst_stars(target, channel, data_dir='', mosaics=0):
     psf_star_id = np.zeros(n_psf_stars, dtype=int)
     for idx, (x, y) in enumerate(zip(x_init, y_init)):
 
-        dist = np.sqrt((x_new - x)**2 + (y_new - y)**2)
-        match_x = x_new[dist == np.min(dist)]
-        match_y = y_new[dist == np.min(dist)]
-        match_id = id_alf[dist == np.min(dist)]
-        match_mag = psf_mag[dist == np.min(dist)]
-        match_err = psf_err[dist == np.min(dist)]
+        dist = np.sqrt((deep_alf_data['x'] - x)**2 + (deep_alf_data['y'] - y)**2)
+        match = np.argmin(dist)
+        match_x = deep_alf_data['x'][match]
+        match_y = deep_alf_data['y'][match]
+        match_id = deep_alf_data['id'][match]
+        match_mag = deep_alf_data['mag'][match]
+        match_err = deep_alf_data['err'][match]
+
         # find all stars within 10 (mosiac) pixels of the calibrators
-        neighbor_ids = id_alf[dist < 10]
-        neighbor_mags = psf_mag[dist < 10]
-        neighbor_dists = dist[dist < 10]
+        neighbors = dist < 10
+        neighbor_ids = deep_alf_data['id'][neighbors]
+        neighbor_mags = deep_alf_data['mag'][neighbors]
+        neighbor_dists = dist[neighbors]
         cmag = match_mag
         if len(neighbor_ids) > 0 :
             neighbor_ids = np.delete(neighbor_ids, np.argwhere(neighbor_ids == match_id))
@@ -571,26 +403,25 @@ def find_lst_stars(target, channel, data_dir='', mosaics=0):
         neigh_dists[idx] = neighbor_dists
         #print match_id, neighbor_ids
 
-    # we only need this step if it wasn't already done.
-    if mosaics == 1:
-        # make coo file for deep mosaic
-        coo_mosaic = re.sub('_dn.lst', '.coo', lst_file)
-        f_handle = open(coo_mosaic, 'w')
-        f = open(lst_file, 'r')
-        for ii in range(3):
-            line = f.readline()
-            f_handle.write(line)
-        f.close()
-        f_handle.close()
-        f_handle = open(coo_mosaic, 'a')
-        data_save = np.array(zip(psf_star_id, psf_star_x, psf_star_y, psf_star_mags,
-            psf_star_errs, psf_star_cmags, np.repeat(-9.999, n_psf_stars)), dtype=[('id', int), ('x', float), ('y', float),
-            ('mag', float), ('err', float), ('mag2', float), ('oth2', float)])
-        np.savetxt(f_handle, data_save, fmt='%8i %8.2f %8.2f %8.3f %8.3f %8.3f %8.3f')
-        f_handle.close()
+    # make coo file for deep mosaic
+    coo_mosaic = re.sub('_dn.lst', '.coo', deep_lst)
+    f_handle = open(coo_mosaic, 'w')
+    f = open(deep_lst, 'r')
+    for ii in range(3):
+        line = f.readline()
+        f_handle.write(line)
+    f.close()
+    f_handle.close()
+    f_handle = open(coo_mosaic, 'a')
+    data_save = np.array(zip(psf_star_id, psf_star_x, psf_star_y, psf_star_mags,
+        psf_star_errs, psf_star_cmags, np.repeat(-9.999, n_psf_stars)), dtype=[('id', int), ('x', float), ('y', float),
+        ('mag', float), ('err', float), ('mag2', float), ('oth2', float)])
+    np.savetxt(f_handle, data_save, fmt='%8i %8.2f %8.2f %8.3f %8.3f %8.3f %8.3f')
+    f_handle.close()
 
     # collect multi-epoch allframe photometry
     for alf_file in alf_all_list:
+
         coo_file = re.sub('_dn.alf', '.coo', alf_file)
         f_handle = open(coo_file, 'w')
         dn_coo = re.sub('.coo', '_dn.coo', coo_file)
@@ -601,22 +432,23 @@ def find_lst_stars(target, channel, data_dir='', mosaics=0):
         f.close()
         f_handle.close()
 
-        id_epoch, x_epoch, y_epoch, psf_epoch, err_epoch = read_dao.read_alf(alf_file)
+        alf_data = dao.read_alf(alf_file)
 
         for star in range(n_psf_stars):
     #        print psf_stars[star][0], psf_stars[star][1:], neigh_dists[star]
             f_handle = open(coo_file, 'a')
-
-            this_x = x_epoch[id_epoch == psf_stars[star][0]]
-            this_y = y_epoch[id_epoch == psf_stars[star][0]]
-            this_mag = psf_epoch[id_epoch == psf_stars[star][0]]
-            this_err = err_epoch[id_epoch == psf_stars[star][0]]
+            this_star = alf_data['id'] == psf_stars[star][0]
+            this_x = alf_data['x'][this_star]
+            this_y = alf_data['y'][this_star]
+            this_mag = alf_data['mag'][this_star]
+            this_err = alf_data['err'][this_star]
             if len(this_mag) > 0:
                 flux = 10**(this_mag[0]/ -2.5)
             #    ds = np.array(neigh_dists[star], dtype=float)
 
                 for neigh, d in zip(psf_stars[star][1:], neigh_dists[star]):
-                    neigh_mag = psf_epoch[id_epoch == neigh]
+                    neighbor = alf_data['id'] == neigh
+                    neigh_mag = alf_data['mag'][neighbor]
                     if len(neigh_mag) > 0:
                     #    print 'Adding {} to {}...'.format(neigh_mag, this_mag)
                         fluxratio = get_flux_ratio(channel, d/2.0)
@@ -632,31 +464,29 @@ def find_lst_stars(target, channel, data_dir='', mosaics=0):
             f_handle.close()
 
 
-def do_ap_phot(target, channel, exptime, data_dir='', dao_dir='', mosaics=0, opt_dir='/Volumes/Annie/CRRP/OPTfiles/'):
+def do_ap_phot(target, channel, exptime, verbose=0):
 
+    print 'Doing aperture photometry on single epoch mosaics. Use verbose=1 to see daophot output.'
+    data_dir = config.top_dir+target
+    os.chdir(data_dir+'/mosaics')
+    print 'Changed directory to {}'.format(data_dir+'/mosaics')
     # list original [in flux units] fits files
-    if mosaics == 0:
-        fits_list = glob.glob(data_dir+'data/'+channel+'*[0-9].fits')
-    if mosaics == 1:
-        fits_list = glob.glob(data_dir+'mosaics/'+channel+'*[0-9].fits')
+
+    fits_list = glob.glob(channel+'*[0-9].fits')
     deep_mosaic = target+'_'+channel+'_deep.fits'
 
     # copy appropriate OPT files for invidual BCDs
+    daophot_setup.set_opt_files(channel, exptime, warm=1, mosaic=1)
 
-    if mosaics == 0:
-        daophot_setup.set_opt_files(opt_dir, channel, exptime, warm=1)
-    if mosaics == 1:
-        daophot_setup.set_opt_files_mosaic(opt_dir, channel, exptime, warm=1)
     # start DAOPHOT
-    daophot = pexpect.spawn(dao_dir+'daophot')
-    daophot.logfile = sys.stdout
+    daophot = pexpect.spawn(config.dao_dir+'daophot')
+    if verbose == 1:
+        daophot.logfile = sys.stdout
+    daophot.expect('Command:')
     for image in fits_list:
-        if mosaics == 0:
-            img = re.sub(data_dir+'data/', target+':', image)
-        if mosaics == 1:
-            img = re.sub(data_dir+'mosaics/', target+'m:', image)
-        daophot.expect("Command:")
-        daophot.sendline("at " + img)
+
+#        daophot.expect("Command:")
+        daophot.sendline("at " + image)
         daophot.expect("Command:")
         daophot.sendline("phot")
         daophot.expect("File with aperture radii")
@@ -667,39 +497,46 @@ def do_ap_phot(target, channel, exptime, data_dir='', dao_dir='', mosaics=0, opt
         daophot.sendline('')
         daophot.expect("Output file")
         daophot.sendline('')
-    daophot.expect('Command:')
+        check = daophot.expect(['Command:', 'OVERWRITE'])
+        if check == 1:
+            daophot.sendline('')
+#    daophot.expect('Command:')
     daophot.sendline('exit')
     daophot.close(force=True)
 
-    # only need to do this if is isn't already done
-    if mosaics == 1:
-        os.chdir(data_dir+'/DeepMosaic')
-        print 'Changed directory to DeepMosaic\n'
-        # Now do aperture photometry on the deep mosaic
-        daophot_setup.set_opt_files_mosaic(opt_dir, channel, exptime, warm=1)
-        lst_file = re.sub('.fits', '.coo', deep_mosaic)
-        ap_file = re.sub('.fits', '.ap', deep_mosaic)
-        # start DAOPHOT
-        daophot = pexpect.spawn(dao_dir+'daophot')
+    print 'Doing aperture photometry on deep mosaic...'
+    os.chdir(data_dir+'/DeepMosaic')
+    print 'Changed directory to {}'.format(data_dir+'/DeepMosaic')
+    # Now do aperture photometry on the deep mosaic
+    daophot_setup.set_opt_files(channel, exptime, warm=1, mosaic=1)
+    lst_file = re.sub('.fits', '.coo', deep_mosaic)
+    ap_file = re.sub('.fits', '.ap', deep_mosaic)
+    # start DAOPHOT
+    daophot = pexpect.spawn(config.dao_dir+'daophot')
+    if verbose == 1:
         daophot.logfile = sys.stdout
-        img = re.sub(data_dir+'data/', target+':', image)
-        daophot.expect("Command:")
-        daophot.sendline("at " + deep_mosaic)
-        daophot.expect("Command:")
-        daophot.sendline("phot")
-        daophot.expect("File with aperture radii")
+    daophot.expect("Command:")
+    daophot.sendline("at " + deep_mosaic)
+    daophot.expect("Command:")
+    daophot.sendline("phot")
+    daophot.expect("File with aperture radii")
+    daophot.sendline("")
+    daophot.expect("PHO>")
+    daophot.sendline("")
+    daophot.expect("Input position file")
+    daophot.sendline(lst_file)
+    daophot.expect("Output file")
+    daophot.sendline(ap_file)
+    check = daophot.expect(["Command:", "OVERWRITE"])
+    if check == 1:
         daophot.sendline("")
-        daophot.expect("PHO>")
-        daophot.sendline("")
-        daophot.expect("Input position file")
-        daophot.sendline(lst_file)
-        daophot.expect("Output file")
-        daophot.sendline(ap_file)
         daophot.expect('Command:')
         daophot.sendline('exit')
-        daophot.close(force=True)
-        os.chdir(data_dir)
-
+    if check == 0:
+        daophot.sendline('exit')
+    daophot.close(force=True)
+    os.chdir(data_dir)
+    print 'Changed directory to {}'.format(data_dir)
 
 def get_flux_ratio(channel, pixel_distance):
     # pixel distance is in Native IRAC pixels

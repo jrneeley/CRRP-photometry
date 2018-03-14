@@ -8,7 +8,8 @@ import lightcurves
 import glob
 from astropy.time import Time
 import plotting_utilities
-import read_dao
+import dao
+import config
 
 def read_optical_catalog(optical_dir, target):
 
@@ -36,9 +37,9 @@ def read_optical_catalog(optical_dir, target):
     print "Finished reading optical catalog."
     return(id_num, x, y, ra, dec)
 
-def read_optical_fnl(optical_dir, target):
+def read_optical_fnl(target):
 
-    catalog=optical_dir+target+'.fnl'
+    catalog = config.optical_dir+target+'.fnl'
 
     print "Reading optical catalog for "+target+"..."
 
@@ -62,9 +63,9 @@ def read_optical_fnl(optical_dir, target):
     print "Finished reading optical catalog."
     return(id_num, x, y, ra, dec)
 
-def read_fnl_w_radial_dist(optical_dir, target, center_ra, center_dec):
+def read_fnl_w_radial_dist(target, center_ra, center_dec):
 
-    catalog=optical_dir+target+'.fnl'
+    catalog = config.optical_dir+target+'.fnl'
 
     print "Reading optical catalog for "+target+"..."
 
@@ -90,9 +91,9 @@ def read_fnl_w_radial_dist(optical_dir, target, center_ra, center_dec):
     print "Finished reading optical catalog."
     return(data, dist)
 
-def read_fnl(optical_dir, target):
+def read_fnl(target):
 
-    catalog=optical_dir+target+'.fnl'
+    catalog = config.optical_dir+target+'.fnl'
 
     print "Reading optical catalog for "+target+"..."
 
@@ -108,9 +109,9 @@ def read_fnl(optical_dir, target):
     print "Finished reading optical catalog."
     return data
 
-def read_nir_fnl(optical_dir, target):
+def read_nir_fnl(target):
 
-    catalog=optical_dir+target+'ir.fnl'
+    catalog = config.optical_dir+target+'ir.fnl'
 
     print "Reading NIR catalog for "+target+"..."
 
@@ -125,9 +126,9 @@ def read_nir_fnl(optical_dir, target):
     print "Finished reading optical catalog."
     return data
 
-def find_variables_fnl(optical_dir, target, center_ra, center_dec, data_dir=''):
-
-    catalog=optical_dir+target+'.fnl'
+def find_variables_fnl(target, center_ra, center_dec):
+    data_dir = config.top_dir+target
+    catalog = config.optical_dir+target+'.fnl'
 
     f = open(catalog, 'r')
     lines = f.readlines()
@@ -141,7 +142,7 @@ def find_variables_fnl(optical_dir, target, center_ra, center_dec, data_dir=''):
             variable_id.append(temp[-1])
     f.close()
 
-    data, dist = read_fnl_w_radial_dist(optical_dir, target, center_ra, center_dec)
+    data, dist = read_fnl_w_radial_dist(target, center_ra, center_dec)
     mags = np.zeros(len(master_id))
     errs = np.zeros(len(master_id))
     rad_dist = np.zeros(len(master_id))
@@ -178,49 +179,9 @@ def find_variables_fnl(optical_dir, target, center_ra, center_dec, data_dir=''):
         dtype=[('c1', 'S10'), ('c2', int), ('c3', float), ('c4', float), ('c5', float),
         ('c6', float), ('c7', float), ('c8', float), ('c9', float), ('c10', 'S13'),
         ('c11', 'S13'), ('c12', float)])
-    np.savetxt(data_dir+'candidate-vars.txt', data_save, comments='',
+    np.savetxt(data_dir+'/candidate-vars.txt', data_save, comments='',
         fmt='%10s %8i %7.3f %6.3f %7.3f %7.3f %7.3f %6.1f %7.4f %13s %13s %10.3f')
 
-def cut_optical_catalog(optical_dir, target, xmin, xmax, ymin, ymax):
-
-    ID, x, y, mag, err = read_dao.read_mag(optical_dir+target+'-I.mag')
-    MIRfov = np.argwhere(x >= xmin) #& x <= xmax & y >= ymin & y <= ymax)
-    ID_new = ID[(x >= xmin) & (x <= xmax) & (y >= ymin) & (y <= ymax)]
-    x_new = x[(x >= xmin) & (x <= xmax) & (y >= ymin) & (y <= ymax)]
-    y_new = y[(x >= xmin) & (x <= xmax) & (y >= ymin) & (y <= ymax)]
-    mag_new = mag[(x >= xmin) & (x <= xmax) & (y >= ymin) & (y <= ymax)]
-    err_new = err[(x >= xmin) & (x <= xmax) & (y >= ymin) & (y <= ymax)]
-
-
-    np.savetxt(optical_dir+target+'-Icut.mag', zip(ID_new, x_new, y_new,
-        mag_new, err_new), fmt = '%8.0f %8.2f %8.3f %7.3f %6.4f ')
-
-def read_optical_catalog_old(target):
-
-    catalog='test_old.dat'
-
-    print "Reading optical catalog for "+target+"..."
-    data = ascii.read(catalog, delimiter=' ', data_start=3)
-
-    id_num = np.array(data["col1"])
-    x = np.array(data["col2"])
-    y = np.array(data["col3"])
-    u_mags = np.array(data["col4"])
-    b_mags = np.array(data["col6"])
-    v_mags = np.array(data["col8"])
-    r_mags = np.array(data["col10"])
-    i_mags = np.array(data["col11"])
-    ra_h = np.array(data["col26"])
-    ra_m = np.array(data["col27"])
-    ra_s = np.array(data["col28"])
-    dec_d = np.array(data["col29"])
-    dec_m = np.array(data["col30"])
-    dec_s = np.array(data["col31"])
-
-    ra, dec = coordinats.hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s)
-
-    print "Finished reading optical catalog."
-    return(id_num, x, y, v_mags, ra, dec)
 
 def compile_datasets(target, old=0, returnColors=True):
 
