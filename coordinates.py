@@ -111,7 +111,7 @@ def radec_string2deg(ra, dec):
 
             ra_sep = ra[ind].split(':')
             dec_sep = dec[ind].split(':')
-            print ra_sep, dec_sep
+            #print ra_sep, dec_sep
             ra_deg, dec_deg = hms2deg(float(ra_sep[0]), float(ra_sep[1]),
                 float(ra_sep[2]), float(dec_sep[0]), float(dec_sep[1]), float(dec_sep[2]))
             ra_new[ind] = ra_deg

@@ -123,12 +123,12 @@ def read_nir_fnl(target):
         ('ra_s', float), ('dec_d', int), ('dec_m', int), ('dec_s', float)])
     data = np.loadtxt(catalog, dtype=dtype1, skiprows=3, usecols=range(25))
 
-    print "Finished reading optical catalog."
+    print "Finished reading NIR catalog."
     return data
 
 def find_variables_fnl(target, center_ra, center_dec):
     data_dir = config.top_dir+target
-    catalog = config.optical_dir+target+'.fnl'
+    catalog = config.optical_dir+target+'.vary'
 
     f = open(catalog, 'r')
     lines = f.readlines()
@@ -141,6 +141,7 @@ def find_variables_fnl(target, center_ra, center_dec):
             master_id.append(int(temp[0]))
             variable_id.append(temp[-1])
     f.close()
+    print 'Found {} candidate variables.'.format(len(variable_id))
 
     data, dist = read_fnl_w_radial_dist(target, center_ra, center_dec)
     mags = np.zeros(len(master_id))
@@ -154,21 +155,22 @@ def find_variables_fnl(target, center_ra, center_dec):
     ra = np.zeros(len(master_id), dtype='S13')
     dec = np.zeros(len(master_id), dtype='S13')
     for ind, star in enumerate(master_id):
+        match = data['id'] == star
 
-        mags[ind] = data['V'][data['id'] == star]
-        errs[ind] = data['Ver'][data['id'] == star]
-        rad_dist[ind] = dist[data['id'] == star]
-        var1[ind] = data['var1'][data['id'] == star]
-        var2[ind] = data['var2'][data['id'] == star]
-        var3[ind] = data['var3'][data['id'] == star]
-        var4[ind] = data['var4'][data['id'] == star]
-        var5[ind] = data['var5'][data['id'] == star]
-        ra_h = data['ra_h'][data['id'] == star]
-        ra_m = data['ra_m'][data['id'] == star]
-        ra_s = data['ra_s'][data['id'] == star]
-        dec_d = data['dec_d'][data['id'] == star]
-        dec_m = data['dec_m'][data['id'] == star]
-        dec_s = data['dec_s'][data['id'] == star]
+        mags[ind] = data['V'][match]
+        errs[ind] = data['Ver'][match]
+        rad_dist[ind] = dist[match]
+        var1[ind] = data['var1'][match]
+        var2[ind] = data['var2'][match]
+        var3[ind] = data['var3'][match]
+        var4[ind] = data['var4'][match]
+        var5[ind] = data['var5'][match]
+        ra_h = data['ra_h'][match]
+        ra_m = data['ra_m'][match]
+        ra_s = data['ra_s'][match]
+        dec_d = data['dec_d'][match]
+        dec_m = data['dec_m'][match]
+        dec_s = data['dec_s'][match]
     #    ra_d, dec_de = coordinates.hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s)
     #    ra_deg[ind] = ra_d[0]
     #    dec_deg[ind] = dec_de[0]
@@ -182,6 +184,24 @@ def find_variables_fnl(target, center_ra, center_dec):
     np.savetxt(data_dir+'/candidate-vars.txt', data_save, comments='',
         fmt='%10s %8i %7.3f %6.3f %7.3f %7.3f %7.3f %6.1f %7.4f %13s %13s %10.3f')
 
+def find_variables(target, center_ra, center_dec):
+    data_dir = config.top_dir+target
+    catalog = config.optical_dir+target+'.vary'
+
+    f = open(catalog, 'r')
+    f2 = open('candidate-variables.txt', 'w')
+    lines = f.readlines()
+    master_id=[]
+    variable_id=[]
+
+    for line in lines:
+        temp = line.split()
+        if len(temp) == 32:
+            master_id.append(int(temp[0]))
+            variable_id.append(temp[-1])
+            f2.write(line)
+    f.close()
+    print 'Found {} candidate variables.'.format(len(variable_id))
 
 def compile_datasets(target, old=0, returnColors=True):
 

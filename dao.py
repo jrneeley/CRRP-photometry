@@ -8,59 +8,67 @@ import sys
 import matplotlib.pyplot as mp
 import config
 
-def daophot(fitsfile):
+def daophot(fitsfile, find=1, phot=1, coo_file='', ap_file='', verbose=0):
 
     dao_dir = config.dao_dir
     image = re.sub(".fits","", fitsfile)
 
-## Clean up previous runs
-
-    extensions = ['.coo', '.lst', '.psf', '.nei', '.ap', '.als', 's.coo', 's.ap', '.srt', '.cmb', 's.fits', '.als']
-    for ext in extensions:
-        if (os.path.isfile(image + ext)):
-            os.remove(image+ext)
 ## Running daophot
     daophot = pexpect.spawn(dao_dir+'daophot')
-	#daophot.logfile = sys.stdout
+    if verbose == 1:
+        daophot.logfile = sys.stdout
 
 # ATTACH
     daophot.expect("Command:")
     daophot.sendline("at " + image)
 
 # FIND
-    daophot.expect("Command:")
-    daophot.sendline("find")
-    daophot.expect("Number of frames averaged, summed:")
-    daophot.sendline("1,1")
-    daophot.expect("File for positions")
-    daophot.sendline("")
-    daophot.expect("Are you happy with this?")
-    daophot.sendline("y")
+    if find == 1:
+        daophot.expect("Command:")
+        daophot.sendline("find")
+        daophot.expect("Number of frames averaged, summed:")
+        daophot.sendline("1,1")
+        daophot.expect("File for positions")
+        daophot.sendline(coo_file)
+        check = daophot.expect(['Are you happy with this?', 'OVERWRITE'])
+        if check == 1:
+            daophot.sendline('')
+            daophot.expect("Are you happy with this?")
+            daophot.sendline("y")
+        if check == 0:
+            daophot.sendline("y")
 
-#	print "FIND complete"
-
-## PHOT
-    daophot.expect("Command:")
-    daophot.sendline("phot")
-    daophot.expect("File with aperture radii")
-    daophot.sendline("")
-    daophot.expect("PHO>")
-    daophot.sendline("")
-    daophot.expect("Input position file")
-    daophot.sendline(image + '.coo')
-    daophot.expect("Output file")
-    daophot.sendline(image + '.ap')
-
-#	print "PHOT complete"
+# PHOT
+    if phot == 1:
+        daophot.expect("Command:")
+        daophot.sendline("phot")
+        daophot.expect("File with aperture radii")
+        daophot.sendline("")
+        daophot.expect("PHO>")
+        daophot.sendline("")
+        check = daophot.expect(['Input position file', 'Profile-fitting photometry'])
+        if check == 1:
+            daophot.sendline('e')
+            daophot.expect('Input position file')
+            daophot.sendline(coo_file)
+        if check == 0:
+            daophot.sendline(coo_file)
+        daophot.expect("Output file")
+        daophot.sendline(ap_file)
 
 ## Exit Daophot
-    daophot.expect("Command:")
-    daophot.sendline("exit")
+    check2 = daophot.expect(['Command:', 'OVERWRITE'])
+    if check2 == 1:
+        daophot.sendline('')
+        daophot.expect('Command:')
+        daophot.sendline('exit')
+    if check2 == 0:
+        daophot.sendline("exit")
     daophot.close(force=True)
 
 #print "Initial aperture photometry complete."
 
-def find_psf(dao_dir, fitsfile):
+def find_psf(fitsfile):
 
 	file_stem = re.sub(".fits","", fitsfile)
 
@@ -75,7 +83,7 @@ def find_psf(dao_dir, fitsfile):
 	print "Working on " + image
 
 #Running daophot
-	daophot = pexpect.spawn(dao_dir+'daophot')
+	daophot = pexpect.spawn(config.dao_dir+'daophot')
 	daophot.logfile = sys.stdout
 # attach the image
 	daophot.expect("Command:")
@@ -96,9 +104,9 @@ def find_psf(dao_dir, fitsfile):
 	print "PSF complete"
 
 
-def substar(dao_dir, fitsfile):
+def substar(fitsfile):
 
-	daophot = pexpect.spawn(dao_dir+'daophot')
+	daophot = pexpect.spawn(config.dao_dir+'daophot')
 
 	daophot.expect('Command:')
 	daophot.sendline('at '+fitsfile)
@@ -118,7 +126,7 @@ def substar(dao_dir, fitsfile):
 	daophot.sendline('ex')
 	daophot.close(force=True)
 
-def append(dao_dir, fitsfile):
+def append(fitsfile):
 
 	orig_img = re.sub('.fits', '', fitsfile)
 	sub_img = re.sub('dn', 'dns', orig_img)
@@ -127,7 +135,7 @@ def append(dao_dir, fitsfile):
 	for ext in extensions:
 		if (os.path.isfile(orig_img + ext)): os.remove(orig_img+ext)
 
-	daophot = pexpect.spawn(dao_dir+'daophot')
+	daophot = pexpect.spawn(config.dao_dir+'daophot')
 #	daophot.logfile = sys.stdout
 	daophot.expect('Command:')
 	daophot.sendline('append')
@@ -149,7 +157,7 @@ def append(dao_dir, fitsfile):
 	daophot.sendline('y')
 	daophot.expect('Command:')
 
-def allstar(dao_dir, fitsfile):
+def allstar(fitsfile):
 
 	file_stem = re.sub(".fits","", fitsfile)
 
@@ -161,7 +169,7 @@ def allstar(dao_dir, fitsfile):
     #    print "Working on " + image
 
 ## Running ALLSTAR
-	allstar = pexpect.spawn(dao_dir+'allstar', timeout=240)
+	allstar = pexpect.spawn(config.dao_dir+'allstar', timeout=240)
 	#allstar.logfile = sys.stdout
 
 	allstar.expect("OPT")
@@ -182,11 +190,11 @@ def allstar(dao_dir, fitsfile):
 
 
 # run daomatch on a list of images
-def daomatch(dao_dir, image_list, output_file, verbose=0,
+def daomatch(image_list, output_file, verbose=0,
                     xy_limits=None, force_scale_rot=0, force_scale=0):
 
 ## run DAOMATCH on on fields
-    daomatch = pexpect.spawn(dao_dir+'daomatch')
+    daomatch = pexpect.spawn(config.dao_dir+'daomatch')
     if verbose == 1:
         daomatch.logfile = sys.stdout
 
@@ -258,7 +266,7 @@ def check_daomatch(mch_file):
         ax1.set_ylabel('y')
         mp.show()
 
-def daomaster(dao_dir, matchfile, frame_num='12, 0.5, 24', sigma='10',
+def daomaster(matchfile, frame_num='12, 0.5, 24', sigma='10',
             transformation='20', new_id='n', mag_file='n', corr_file='n',
             raw_file='n', new_trans='y', verbose=0,
             match_radii=[-5, 4, 3, 2, 2, 1, 1, 1, 1, 0.5, 0.5, 0.5, 0.5]):
@@ -267,7 +275,7 @@ def daomaster(dao_dir, matchfile, frame_num='12, 0.5, 24', sigma='10',
     magfile=re.sub(".mch", ".mag", matchfile)
     if (os.path.isfile(magfile)):
             os.remove(magfile)
-    daomaster = pexpect.spawn(dao_dir+'daomaster')
+    daomaster = pexpect.spawn(config.dao_dir+'daomaster')
     if verbose == 1:
         daomaster.logfile = sys.stdout
 

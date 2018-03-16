@@ -1,33 +1,36 @@
 import numpy as np
 import matplotlib.pyplot as mp
 import daophot_setup
-import daophot
+import dao
 import re
-import allstar
 import os
 import sys
 import optical
 import coordinates
+import config
 #sys.path.insert(0, '/Users/Jill/python/daophot-tools/')
-import daomatch
-import daomaster
-import read_dao
 
-def mosaic_phot(mosaic_fits, channel, exptime, dao_dir='/usr/local/phot/', data_dir='', opt_dir='/Volumes/Annie/CRRP/OPTfiles/'):
 
-    curr_dir = os.getcwd()
-    os.chdir(data_dir+'DeepMosaic')
-    print 'Changed directory to DeepMosaic\n'
+def mosaic_phot(target, channel, exptime):
+
+    data_dir = config.top_dir+target
+    os.chdir(data_dir+'/DeepMosaic')
+    print 'Changed directory to {}'.format(data_dir+'/DeepMosaic')
+
 # headers of deep mosaics are wrong, so must input right numbers here.
     # convert deep mosaic to counts
     if channel == 'I1' : fluxconv = 0.1257
     if channel == 'I2' : fluxconv = 0.1447
+
+    mosaic_fits = target+'_'+channel+'_deep.fits'
     daophot_setup.spitzer_flux2dn(mosaic_fits, exptime=float(exptime), fluxconv=fluxconv)
+    print 'Copying OPT files...'
     # copy OPT files to current dir
-    daophot_setup.set_opt_files_mosaic(opt_dir, channel, exptime, warm=1)
+    daophot_setup.set_opt_files(channel, exptime, warm=1, mosaic=1)
+    print 'Doing initial aperture photometry...'
     # Find stars and do initial aperture photometry on deep mosaic
-    mosaic_dn = re.sub('.fits', '_dn.fits', mosaic_fits)
-    daophot.deep_mosaic_phot(dao_dir, mosaic_dn)
+    mosaic_dn = target+'_'+channel+'_deep_dn.fits'
+    dao.daophot(mosaic_dn, find=1, phot=1, verbose=0)
     # You must choose your PSF stars from the .coo by hand
     ready = raw_input('Pick PSF stars by hand, type continue when ready, or stop to exit: ')
     if ready == 'stop': sys.exit()
@@ -53,35 +56,36 @@ def mosaic_phot(mosaic_fits, channel, exptime, dao_dir='/usr/local/phot/', data_
         np.savetxt(f_handle, line, fmt='%8i %8.2f %8.2f %8.3f %8.3f %8.3f %8.3f')
     f_handle.close()
     # measure the PSF
-    daophot.find_psf(dao_dir, mosaic_dn)
+    dao.find_psf(mosaic_dn)
     repeat = raw_input('Do you want to remove any PSF stars? [y/n]: ')
     if repeat == 'y':
         ready = raw_input('Delete from .lst file and type continue when ready: ')
-        daophot.find_psf(dao_dir, mosaic_dn)
+        dao.find_psf(mosaic_dn)
     if repeat == 'n':
         print 'PSF ok...continuing...\n'
     print 'Running allstar on deep mosaic...'
-    allstar.allstar_deep(dao_dir, mosaic_dn)
+    dao.allstar(mosaic_dn)
     sub_img = re.sub('dn.fits', 'dns.fits', mosaic_dn)
     print '\nRunning FIND/PHOT on subtracted image...'
-    daophot.deep_mosaic_phot(dao_dir, sub_img)
+    dao.daophot(sub_img, find=1, phot=1)
     print 'Appending new stars to star list...'
-    daophot.append(dao_dir, mosaic_dn)
+    dao.append(mosaic_dn)
     print 'Running PHOT on new star list...'
-    daophot.deep_mosaic_phot2(dao_dir, mosaic_dn)
+    dao.daophot(mosaic_dn, find=0, phot=1, coo_file='.srt')
     print 'Running allstar on deep mosaic again...'
-    allstar.allstar_deep(dao_dir, mosaic_dn)
+    dao.allstar(mosaic_dn)
     print 'Finished with deep mosaic. \n'
-    os.chdir('../')
-    ## need to update .lst file with new ID numbers/positions
+    os.chdir(data_dir)
+    print 'Changed directory to {}'.format(data_dir)
 
-def match_optical(target, channel, data_dir='', optical_dir='/Volumes/Annie/CRRP/OpticalCatalogs/', dao_dir='/usr/local/phot/'):
+def match_optical(target, channel):
 
     deep_mosaic_fits = target+'_'+channel+'_deep.fits'
 
-    curr_dir = os.getcwd()
-    os.chdir(data_dir+'DeepMosaic')
-    ids, catalog_x, catalog_y, catalog_ra, catalog_dec = optical.read_optical_fnl(optical_dir, target)
+    data_dir = config.top_dir+target
+    os.chdir(data_dir+'/DeepMosaic')
+
+    ids, catalog_x, catalog_y, catalog_ra, catalog_dec = optical.read_optical_fnl(target)
 
     als_file = re.sub('.fits', '_dn.als', deep_mosaic_fits)
     dtype1 = np.dtype([('x', float), ('y', float)])
@@ -112,25 +116,27 @@ def match_optical(target, channel, data_dir='', optical_dir='/Volumes/Annie/CRRP
         ('c2', float), ('c3', float), ('c4', float), ('c5', float)])
     np.savetxt(channel+'-deep-cuts.txt', data_save, comments='', fmt='%s %0.3f %0.3f %0.3f %0.3f')
 
+    print 'Matching optical and MIR catalogs...'
     limits = str(min_x)+','+str(max_x)+','+str(min_y)+','+str(max_y)
     image_list = ['optical:'+target+'-I.mag', als_file]
     mch_file = 'op-'+channel+'.mch'
-    daomatch.daomatch(image_list, mch_file, dao_dir=dao_dir, xy_limits=limits)
-    daomaster.daomaster(mch_file, dao_dir=dao_dir, frame_num='1,0.5,1')
-    os.chdir(curr_dir)
+    dao.daomatch(image_list, mch_file, xy_limits=limits)
+    dao.daomaster(mch_file, frame_num='1,0.5,1')
+    os.chdir(data_dir)
 
-def check_match(target, channel, optical_dir='/Volumes/Annie/CRRP/OpticalCatalogs/', data_dir=''):
+def check_match(target, channel):
 
+    data_dir = config.top_dir+target
     fig = mp.figure(figsize=(8,8))
     ax1 = fig.add_subplot(111)
 
     # read optical catalog and add to plots
-    ids, xcat, ycat, ra, dec = optical.read_optical_fnl(optical_dir, target)
+    ids, xcat, ycat, ra, dec = optical.read_optical_fnl(target)
     ax1.plot(xcat, ycat, '.', color='0.25', markersize=0.75)
 
     # read boundaries of IRAC data
     dtype1 = np.dtype([('xmin', float), ('xmax', float), ('ymin', float), ('ymax', float)])
-    cuts = np.loadtxt(data_dir+'DeepMosaic/'+channel+'-deep-cuts.txt', dtype=dtype1, usecols=(1,2,3,4))
+    cuts = np.loadtxt(data_dir+'/DeepMosaic/'+channel+'-deep-cuts.txt', dtype=dtype1, usecols=(1,2,3,4))
 
     ax1.plot([cuts['xmin'], cuts['xmax']], [cuts['ymin'], cuts['ymin']],
         '-', color='r', linewidth=2)
@@ -145,11 +151,11 @@ def check_match(target, channel, optical_dir='/Volumes/Annie/CRRP/OpticalCatalog
 
 
     # Add transformed catalogs
-    data = read_dao.read_alf(data_dir+'DeepMosaic/'+target+'_'+channel+'_deep_dn.als')
+    data = dao.read_alf(data_dir+'/DeepMosaic/'+target+'_'+channel+'_deep_dn.als')
     x = data['x']
     y = data['y']
 
-    files, x_off, y_off, transform, dof = read_dao.read_mch(data_dir+'DeepMosaic/op-'+channel+'.mch')
+    files, x_off, y_off, transform, dof = dao.read_mch(data_dir+'/DeepMosaic/op-'+channel+'.mch')
 
     x_new = float(x_off[1])+float(transform[1][0])*x+float(transform[1][1])*y
     y_new = float(y_off[1])+float(transform[1][2])*x+float(transform[1][3])*y
