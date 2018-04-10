@@ -115,7 +115,7 @@ def find_zp_single_epoch(target, channel):
     for img in fits_list:
         coo_file = re.sub('.fits', '.coo', img)
         ap_file = re.sub('.fits', '.ap', img)
-
+        #print img
         ids, ap_phot, ap_err = dao.read_ap(ap_file)
         ap_phot = ap_phot - 25.0 + zmag
         data = dao.read_coo_new(coo_file)

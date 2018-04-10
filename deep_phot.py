@@ -8,6 +8,7 @@ import sys
 import optical
 import coordinates
 import config
+import shutil
 #sys.path.insert(0, '/Users/Jill/python/daophot-tools/')
 
 
@@ -78,14 +79,15 @@ def mosaic_phot(target, channel, exptime):
     os.chdir(data_dir)
     print 'Changed directory to {}'.format(data_dir)
 
-def match_optical(target, channel):
+def match_optical(target, channel, opt_name='None'):
 
+    if opt_name == 'None': opt_name = target
     deep_mosaic_fits = target+'_'+channel+'_deep.fits'
 
     data_dir = config.top_dir+target
     os.chdir(data_dir+'/DeepMosaic')
 
-    ids, catalog_x, catalog_y, catalog_ra, catalog_dec = optical.read_optical_fnl(target)
+    ids, catalog_x, catalog_y, catalog_ra, catalog_dec = optical.read_optical_fnl(opt_name)
 
     als_file = re.sub('.fits', '_dn.als', deep_mosaic_fits)
     dtype1 = np.dtype([('x', float), ('y', float)])
@@ -118,20 +120,22 @@ def match_optical(target, channel):
 
     print 'Matching optical and MIR catalogs...'
     limits = str(min_x)+','+str(max_x)+','+str(min_y)+','+str(max_y)
-    image_list = ['optical:'+target+'-I.mag', als_file]
+    image_list = ['optical:'+opt_name+'-I.mag', als_file]
     mch_file = 'op-'+channel+'.mch'
     dao.daomatch(image_list, mch_file, xy_limits=limits)
-    dao.daomaster(mch_file, frame_num='1,0.5,1')
+    dao.daomaster(mch_file, frame_num='2,0.5,2', verbose=1)
     os.chdir(data_dir)
 
-def check_match(target, channel):
+def check_match(target, channel, opt_name='None'):
 
+    if opt_name == 'None': opt_name = target
     data_dir = config.top_dir+target
+
     fig = mp.figure(figsize=(8,8))
     ax1 = fig.add_subplot(111)
 
     # read optical catalog and add to plots
-    ids, xcat, ycat, ra, dec = optical.read_optical_fnl(target)
+    ids, xcat, ycat, ra, dec = optical.read_optical_fnl(opt_name)
     ax1.plot(xcat, ycat, '.', color='0.25', markersize=0.75)
 
     # read boundaries of IRAC data
@@ -162,3 +166,44 @@ def check_match(target, channel):
 
     ax1.plot(x_new, y_new, '.', markersize=1.8, color='r')
     mp.show()
+
+# testing with known psf
+def mosaic_phot2(target, channel, exptime):
+
+    data_dir = config.top_dir+target
+    os.chdir(data_dir+'/DeepMosaic')
+    print 'Changed directory to {}'.format(data_dir+'/DeepMosaic')
+
+# headers of deep mosaics are wrong, so must input right numbers here.
+    # convert deep mosaic to counts
+    if channel == 'I1' : fluxconv = 0.1257
+    if channel == 'I2' : fluxconv = 0.1447
+
+    mosaic_fits = target+'_'+channel+'_deep.fits'
+    daophot_setup.spitzer_flux2dn(mosaic_fits, exptime=float(exptime), fluxconv=fluxconv)
+    print 'Copying OPT files...'
+    # copy OPT files to current dir
+    daophot_setup.set_opt_files(channel, exptime, warm=1, mosaic=1)
+    print 'Doing initial aperture photometry...'
+    # Find stars and do initial aperture photometry on deep mosaic
+    mosaic_dn = target+'_'+channel+'_deep_dn.fits'
+    dao.daophot(mosaic_dn, find=1, phot=1, verbose=0)
+
+    # copy psf to frame
+    psf_dir = config.top_dir+'PSF/'
+    shutil.copy(psf_dir+channel+'-master.psf', target+'_'+channel+'_deep_dn.psf')
+
+    print 'Running allstar on deep mosaic...'
+    dao.allstar(mosaic_dn)
+    sub_img = re.sub('dn.fits', 'dns.fits', mosaic_dn)
+    print '\nRunning FIND/PHOT on subtracted image...'
+    dao.daophot(sub_img, find=1, phot=1)
+    print 'Appending new stars to star list...'
+    dao.append(mosaic_dn)
+    print 'Running PHOT on new star list...'
+    dao.daophot(mosaic_dn, find=0, phot=1, coo_file='.srt')
+    print 'Running allstar on deep mosaic again...'
+    dao.allstar(mosaic_dn)
+    print 'Finished with deep mosaic. \n'
+    os.chdir(data_dir)
+    print 'Changed directory to {}'.format(data_dir)

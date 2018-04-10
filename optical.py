@@ -63,19 +63,29 @@ def read_optical_fnl(target):
     print "Finished reading optical catalog."
     return(id_num, x, y, ra, dec)
 
-def read_fnl_w_radial_dist(target, center_ra, center_dec):
+def read_fnl_w_radial_dist(target, center_ra, center_dec, nir=0):
 
     catalog = config.optical_dir+target+'.fnl'
 
-    print "Reading optical catalog for "+target+"..."
 
-    dtype1 = np.dtype([('id', int), ('x', float), ('y', float), ('V', float),
-        ('Ver', float), ('B', float), ('Ber', float), ('I', float), ('Ier', float),
-        ('R', float), ('Rer', float), ('U', float), ('Uer', float), ('nV', int),
-        ('nB', int), ('nI', int), ('nR', int), ('nU', int), ('chi', float),
-        ('sharp', float), ('var1', float), ('var2', float), ('var3', float),
-        ('var4', float), ('var5', float), ('ra_h', int), ('ra_m', int),
-        ('ra_s', float), ('dec_d', int), ('dec_m', int), ('dec_s', float)])
+    if nir == 0:
+        print 'Reading '+target+' optical catalog...'
+        dtype1 = np.dtype([('id', int), ('x', float), ('y', float), ('V', float),
+            ('Ver', float), ('B', float), ('Ber', float), ('I', float), ('Ier', float),
+            ('R', float), ('Rer', float), ('U', float), ('Uer', float), ('nV', int),
+            ('nB', int), ('nI', int), ('nR', int), ('nU', int), ('chi', float),
+            ('sharp', float), ('var1', float), ('var2', float), ('var3', float),
+            ('var4', float), ('var5', float), ('ra_h', int), ('ra_m', int),
+            ('ra_s', float), ('dec_d', int), ('dec_m', int), ('dec_s', float)])
+    if nir == 1:
+        print 'Reading '+target+' nir catalog...'
+        dtype1 = np.dtype([('id', int), ('x', float), ('y', float), ('J', float),
+            ('Jer', float), ('H', float), ('Her', float), ('K', float), ('Ker', float),
+            ('L', float), ('Ler', float), ('M', float), ('Mer', float), ('nJ', int),
+            ('nH', int), ('nK', int), ('nL', int), ('nM', int), ('chi', float),
+            ('sharp', float), ('var1', float), ('var2', float), ('var3', float),
+            ('var4', float), ('var5', float), ('ra_h', int), ('ra_m', int),
+            ('ra_s', float), ('dec_d', int), ('dec_m', int), ('dec_s', float)])
     data = np.loadtxt(catalog, dtype=dtype1, skiprows=3, usecols=range(31))
 
     ra_h = data['ra_h']
@@ -88,43 +98,39 @@ def read_fnl_w_radial_dist(target, center_ra, center_dec):
     ra, dec = coordinates.hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s)
     dist = coordinates.radial_dist(ra, dec, center_ra, center_dec)
 
-    print "Finished reading optical catalog."
+    print "Finished reading catalog."
     return(data, dist)
 
-def read_fnl(target):
+def read_fnl(target, nir=0):
 
     catalog = config.optical_dir+target+'.fnl'
 
-    print "Reading optical catalog for "+target+"..."
+    if nir == 0:
+        print "Reading optical catalog for "+target+"..."
+    if nir == 1:
+        print 'Reading NIR catalog for '+target+'...'
 
-    dtype1 = np.dtype([('id', int), ('x', float), ('y', float), ('V', float),
+    dtype_opt = np.dtype([('id', int), ('x', float), ('y', float), ('V', float),
         ('Ver', float), ('B', float), ('Ber', float), ('I', float), ('Ier', float),
         ('R', float), ('Rer', float), ('U', float), ('Uer', float), ('nV', int),
         ('nB', int), ('nI', int), ('nR', int), ('nU', int), ('chi', float),
         ('sharp', float), ('var1', float), ('var2', float), ('var3', float),
         ('var4', float), ('var5', float), ('ra_h', int), ('ra_m', int),
         ('ra_s', float), ('dec_d', int), ('dec_m', int), ('dec_s', float)])
-    data = np.loadtxt(catalog, dtype=dtype1, skiprows=3, usecols=range(31))
-
-    print "Finished reading optical catalog."
-    return data
-
-def read_nir_fnl(target):
-
-    catalog = config.optical_dir+target+'ir.fnl'
-
-    print "Reading NIR catalog for "+target+"..."
-
-    dtype1 = np.dtype([('id', int), ('x', float), ('y', float), ('J', float),
+    dtype_nir = np.dtype([('id', int), ('x', float), ('y', float), ('J', float),
         ('Jer', float), ('H', float), ('Her', float), ('K', float), ('Ker', float),
-        ('nJ', int), ('nH', int), ('nK', int), ('chi', float),
+        ('L', float), ('Ler', float), ('M', float), ('Mer', float), ('nJ', int),
+        ('nH', int), ('nK', int), ('nL', int), ('nM', int), ('chi', float),
         ('sharp', float), ('var1', float), ('var2', float), ('var3', float),
         ('var4', float), ('var5', float), ('ra_h', int), ('ra_m', int),
         ('ra_s', float), ('dec_d', int), ('dec_m', int), ('dec_s', float)])
-    data = np.loadtxt(catalog, dtype=dtype1, skiprows=3, usecols=range(25))
-
-    print "Finished reading NIR catalog."
+    if nir == 0:
+        data = np.loadtxt(catalog, dtype=dtype_opt, skiprows=3, usecols=range(31))
+    if nir == 1:
+        data = np.loadtxt(catalog, dtype=dtype_nir, skiprows=3, usecols=range(31))
+    print "Finished reading catalog."
     return data
+
 
 def find_variables_fnl(target, center_ra, center_dec):
     data_dir = config.top_dir+target
@@ -186,7 +192,7 @@ def find_variables_fnl(target, center_ra, center_dec):
 
 def find_variables(target, center_ra, center_dec):
     data_dir = config.top_dir+target
-    catalog = config.optical_dir+target+'.vary'
+    catalog = config.optical_dir+target+'.fnl'
 
     f = open(catalog, 'r')
     f2 = open('candidate-variables.txt', 'w')
