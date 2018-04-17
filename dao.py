@@ -266,10 +266,10 @@ def check_daomatch(mch_file):
         ax1.set_ylabel('y')
         mp.show()
 
-def daomaster(matchfile, frame_num='12, 0.5, 24', sigma='10',
+def daomaster(matchfile, frame_num='12, 0.5, 12', sigma='5',
             transformation='20', new_id='n', mag_file='n', corr_file='n',
             raw_file='n', new_trans='y', verbose=0,
-            match_radii=[-5, 4, 3, 2, 2, 1, 1, 1, 1, 0.5, 0.5, 0.5, 0.5]):
+            match_radii=[-4, 3, 3, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1]):
 
 ## Clean up previous runs
     magfile=re.sub(".mch", ".mag", matchfile)

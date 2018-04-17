@@ -20,8 +20,8 @@ def mosaic_phot(target, channel, exptime):
 
 # headers of deep mosaics are wrong, so must input right numbers here.
     # convert deep mosaic to counts
-    if channel == 'I1' : fluxconv = 0.1257
-    if channel == 'I2' : fluxconv = 0.1447
+    if channel == 'I1' : fluxconv = 0.1257*4
+    if channel == 'I2' : fluxconv = 0.1447*4
 
     mosaic_fits = target+'_'+channel+'_deep.fits'
     daophot_setup.spitzer_flux2dn(mosaic_fits, exptime=float(exptime), fluxconv=fluxconv)

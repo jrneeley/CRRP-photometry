@@ -38,6 +38,6 @@ def set_opt_files(channel, exptime, warm=1, mosaic=1):
 	optfile = opt_dir2+ch+'-'+str(exptime)+ext
 
 	shutil.copy(optfile, 'daophot.opt')
-	shutil.copy(opt_dir+'photo.opt', 'photo.opt')
-	shutil.copy(opt_dir+'allstar.opt', 'allstar.opt')
+	shutil.copy(opt_dir+'photo-mosaic.opt', 'photo.opt')
+	shutil.copy(opt_dir+'allstar-mosaic.opt', 'allstar.opt')
 	shutil.copy(opt_dir+'allframe.opt', 'allframe.opt')
