@@ -176,8 +176,8 @@ def mosaic_phot2(target, channel, exptime):
 
 # headers of deep mosaics are wrong, so must input right numbers here.
     # convert deep mosaic to counts
-    if channel == 'I1' : fluxconv = 0.1257
-    if channel == 'I2' : fluxconv = 0.1447
+    if channel == 'I1' : fluxconv = 0.1257*4
+    if channel == 'I2' : fluxconv = 0.1447*4
 
     mosaic_fits = target+'_'+channel+'_deep.fits'
     daophot_setup.spitzer_flux2dn(mosaic_fits, exptime=float(exptime), fluxconv=fluxconv)
@@ -187,7 +187,7 @@ def mosaic_phot2(target, channel, exptime):
     print 'Doing initial aperture photometry...'
     # Find stars and do initial aperture photometry on deep mosaic
     mosaic_dn = target+'_'+channel+'_deep_dn.fits'
-    dao.daophot(mosaic_dn, find=1, phot=1, verbose=0)
+    dao.daophot(mosaic_dn, find=1, phot=1, num_frames='60,1')
 
     # copy psf to frame
     psf_dir = config.top_dir+'PSF/'
@@ -197,7 +197,7 @@ def mosaic_phot2(target, channel, exptime):
     dao.allstar(mosaic_dn)
     sub_img = re.sub('dn.fits', 'dns.fits', mosaic_dn)
     print '\nRunning FIND/PHOT on subtracted image...'
-    dao.daophot(sub_img, find=1, phot=1)
+    dao.daophot(sub_img, find=1, phot=1, num_frames='60,1')
     print 'Appending new stars to star list...'
     dao.append(mosaic_dn)
     print 'Running PHOT on new star list...'

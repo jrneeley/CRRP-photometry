@@ -8,6 +8,8 @@ import config
 
 def spitzer_flux2dn(image, newname="", exptime=None, fluxconv=None):
 
+	if exptime == 30: exptime = 23.6
+
 	if (newname == ""):
 		newname = re.sub(".fits", "_dn.fits", image)
 	shutil.copy(image, newname)

@@ -8,7 +8,7 @@ import sys
 import matplotlib.pyplot as mp
 import config
 
-def daophot(fitsfile, find=1, phot=1, coo_file='', ap_file='', verbose=0):
+def daophot(fitsfile, find=1, phot=1, coo_file='', ap_file='', num_frames='1,1', verbose=0):
 
     dao_dir = config.dao_dir
     image = re.sub(".fits","", fitsfile)
@@ -27,7 +27,7 @@ def daophot(fitsfile, find=1, phot=1, coo_file='', ap_file='', verbose=0):
         daophot.expect("Command:")
         daophot.sendline("find")
         daophot.expect("Number of frames averaged, summed:")
-        daophot.sendline("1,1")
+        daophot.sendline(num_frames)
         daophot.expect("File for positions")
         daophot.sendline(coo_file)
         check = daophot.expect(['Are you happy with this?', 'OVERWRITE'])

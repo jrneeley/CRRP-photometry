@@ -22,19 +22,19 @@ def merge_opt_deep_catalogs(target, cluster_coord=None, opt_name='None'):
             opt_data, rad_dist = optical.read_fnl_w_radial_dist(opt_name,
                 cluster_coord[0], cluster_coord[1])
         include_opt = 1
-    if os.path.isfile(nir_file):
-        if cluster_coord == None: opt_data = optical.read_fnl(opt_name, nir=1)
-        else:
-            nir_data, rad_dist2 = optical.read_fnl_w_radial_dist(opt_name+'ir',
-                cluster_coord[0], cluster_coord[1], nir=1)
-        include_nir = 1
+#    if os.path.isfile(nir_file):
+#        if cluster_coord == None: opt_data = optical.read_fnl(opt_name, nir=1)
+#        else:
+#            nir_data, rad_dist2 = optical.read_fnl_w_radial_dist(opt_name+'ir',
+#                cluster_coord[0], cluster_coord[1], nir=1)
+#        include_nir = 1
 
 
     dtype1 = np.dtype([('id', int), ('3.6', float), ('3.6err', float)])
     dtype2 = np.dtype([('id', int), ('4.5', float), ('4.5err', float)])
     print 'Reading MIR catalog for '+target+'...'
-    irac1_file = data_dir+'/DeepMosaic/'+target+'_I1_deep_dn.cal'
-    irac2_file = data_dir+'/DeepMosaic/'+target+'_I2_deep_dn.cal'
+    irac1_file = data_dir+'/newmosaics/I1-deep.cal'
+    irac2_file = data_dir+'/newmosaics/I2-deep.cal'
     if os.path.isfile(irac1_file) == 0:
         print 'I1 is uncalibrated!!!'
         irac1_file = data_dir+'/DeepMosaic/'+target+'_I1_deep_dn.alf'
