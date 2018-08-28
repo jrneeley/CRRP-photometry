@@ -15,14 +15,17 @@ import peakutils
 from astropy.stats import sigma_clip
 from IPython import display
 import config
+import os
 
-def make_lcv(target, channels, stars, dao_ids):
+def make_mir_lcvs(target, stars, dao_ids):
 
     data_dir = config.top_dir+target
-
+    
     lcv_folder = data_dir+'/lcvs/mir/'
-    img_folder = data_dir+'/mosaics/'
-
+    if not os.path.exists(lcv_folder):
+        os.makedirs(lcv_folder)
+    img_folder = data_dir+'/newmosaics/'
+    channels = ['I1', 'I2']
     for channel in channels:
         file_list = glob.glob(img_folder+channel+'*.cal')
         if len(file_list) == 0:

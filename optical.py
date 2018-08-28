@@ -195,7 +195,7 @@ def find_variables(target, center_ra, center_dec):
     catalog = config.optical_dir+target+'.fnl'
 
     f = open(catalog, 'r')
-    f2 = open('candidate-variables.txt', 'w')
+    f2 = open(target+'-candidate-variables.txt', 'w')
     lines = f.readlines()
     master_id=[]
     variable_id=[]
@@ -208,6 +208,7 @@ def find_variables(target, center_ra, center_dec):
             f2.write(line)
     f.close()
     print 'Found {} candidate variables.'.format(len(variable_id))
+    return variable_id, master_id
 
 def compile_datasets(target, old=0, returnColors=True):
 
