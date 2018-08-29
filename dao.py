@@ -157,6 +157,47 @@ def append(fitsfile):
 	daophot.sendline('y')
 	daophot.expect('Command:')
 
+def addstar(file_stem='fake', num_images = 1, seed=5, gain=999, star_list=None,
+    min_mag=12, max_mag=18, num_stars=50, verbose=0):
+
+    daophot = pexpect.spawn(config.dao_dir+'daophot')
+    if verbose == 1: daophot.logfile = sys.stdout
+
+    # First attach original image
+    daophot.expect('Command:')
+    daophot.sendline('at'+file_stem+str(ii).zfill(2))
+    # start addstar
+    daophot.expect('Command:')
+    daophot.sendline('ad')
+    daophot.expect('File with PSF')
+    daophot.sendline('')
+    daophot.expect('Seed')
+    daophot.sendline(seed)
+    daophot.expect('Photons per ADU')
+    daophot.sendline(gain)
+    daophot.expect('Input data file')
+    if star_list != None:
+        daophot.sendline(star_list)
+        daophot.expect('Output picture name')
+        daophot.sendline('')
+        daophot.expect('Command')
+        daophot.sendline('ex')
+        daophot.close(force=True)
+    else:
+        daophot.sendline('')
+        daophot.expect('Minimum, maximum magnitudes')
+        daophot.sendline(min_mag+' '+max_mag)
+        daophot.expect('Number of stars to add')
+        daophot.sendline(num_stars)
+        daophot.expect('Number of new frames')
+        daophot.sendline(num_images)
+        daophot.expect('File-name stem')
+        daophot.sendline(file_stem)
+        daophot.expect('Command')
+        daophot.sendline('ex')
+        daophot.close(force=True)
+
+
 def allstar(fitsfile):
 
 	file_stem = re.sub(".fits","", fitsfile)
