@@ -84,8 +84,9 @@ def match_optical(target, channel, opt_name='None'):
     if opt_name == 'None': opt_name = target
     deep_mosaic_fits = target+'_'+channel+'_deep.fits'
 
-    data_dir = config.top_dir+target
-    os.chdir(data_dir+'/DeepMosaic')
+    #data_dir = config.top_dir+target
+    #os.chdir(data_dir+'/DeepMosaic')
+    os.chdir('DeepMosaic')
 
     ids, catalog_x, catalog_y, catalog_ra, catalog_dec = optical.read_optical_fnl(opt_name)
 
@@ -124,12 +125,12 @@ def match_optical(target, channel, opt_name='None'):
     mch_file = 'op-'+channel+'.mch'
     dao.daomatch(image_list, mch_file, xy_limits=limits)
     dao.daomaster(mch_file, frame_num='2,0.5,2', verbose=1)
-    os.chdir(data_dir)
+    os.chdir('../')
 
 def check_match(target, channel, opt_name='None'):
 
     if opt_name == 'None': opt_name = target
-    data_dir = config.top_dir+target
+    #data_dir = config.top_dir+target
 
     fig = mp.figure(figsize=(8,8))
     ax1 = fig.add_subplot(111)
@@ -140,8 +141,8 @@ def check_match(target, channel, opt_name='None'):
 
     # read boundaries of IRAC data
     dtype1 = np.dtype([('xmin', float), ('xmax', float), ('ymin', float), ('ymax', float)])
-    cuts = np.loadtxt(data_dir+'/DeepMosaic/'+channel+'-deep-cuts.txt', dtype=dtype1, usecols=(1,2,3,4))
-
+    #cuts = np.loadtxt(data_dir+'/DeepMosaic/'+channel+'-deep-cuts.txt', dtype=dtype1, usecols=(1,2,3,4))
+    cuts = np.loadtxt('DeepMosaic/'+channel+'-deep-cuts.txt', dtype=dtype1, usecols=(1,2,3,4))
     ax1.plot([cuts['xmin'], cuts['xmax']], [cuts['ymin'], cuts['ymin']],
         '-', color='r', linewidth=2)
     ax1.plot([cuts['xmin'], cuts['xmax']], [cuts['ymax'], cuts['ymax']],
@@ -155,11 +156,13 @@ def check_match(target, channel, opt_name='None'):
 
 
     # Add transformed catalogs
-    data = dao.read_alf(data_dir+'/DeepMosaic/'+target+'_'+channel+'_deep_dn.als')
+    #data = dao.read_alf(data_dir+'/DeepMosaic/'+target+'_'+channel+'_deep_dn.als')
+    data = dao.read_alf('DeepMosaic/'+target+'_'+channel+'_deep_dn.als')
     x = data['x']
     y = data['y']
 
-    files, x_off, y_off, transform, dof = dao.read_mch(data_dir+'/DeepMosaic/op-'+channel+'.mch')
+    #files, x_off, y_off, transform, dof = dao.read_mch(data_dir+'/DeepMosaic/op-'+channel+'.mch')
+    files, x_off, y_off, transform, dof = dao.read_mch('DeepMosaic/op-'+channel+'.mch')
 
     x_new = float(x_off[1])+float(transform[1][0])*x+float(transform[1][1])*y
     y_new = float(y_off[1])+float(transform[1][2])*x+float(transform[1][3])*y

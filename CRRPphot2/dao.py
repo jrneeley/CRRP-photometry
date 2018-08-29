@@ -167,36 +167,55 @@ def substar(fitsfile):
 	daophot.sendline('ex')
 	daophot.close(force=True)
 
-def append(fitsfile):
+def append(fitsfile, file1=None, file2=None, verbose=0):
 
-	orig_img = re.sub('.fits', '', fitsfile)
-	sub_img = re.sub('dn', 'dns', orig_img)
+    orig_stem = re.sub('.fits', '', fitsfile)
+    sub_stem = re.sub('dn', 'dns', orig_stem)
+    if file1 == None:
+        file1 = orig_stem+'.coo'
+    if file2 == None:
+        file2 = sub_stem+'.coo'
 
-	extensions = ['.cmb', '.srt']
-	for ext in extensions:
-		if (os.path.isfile(orig_img + ext)): os.remove(orig_img+ext)
+#    extensions = ['.cmb', '.srt']
+#    for ext in extensions:
+#        if (os.path.isfile(orig_img + ext)): os.remove(orig_img+ext)
 
-	daophot = pexpect.spawn(config.dao_dir+'daophot')
-#	daophot.logfile = sys.stdout
+    daophot = pexpect.spawn(config.dao_dir+'daophot')
+    if verbose == 1:
+        daophot.logfile = sys.stdout
 	daophot.expect('Command:')
 	daophot.sendline('append')
 	daophot.expect('First input file')
-	daophot.sendline(orig_img+'.coo')
+	daophot.sendline(file1)
 	daophot.expect('Second input file')
-	daophot.sendline(sub_img+'.coo')
+	daophot.sendline(file2)
 	daophot.expect('Output file')
 	daophot.sendline('')
-	daophot.expect('Command:')
-	daophot.sendline('sort')
-	daophot.expect('Which do you want')
-	daophot.sendline('3')
-	daophot.expect('Input file name')
-	daophot.sendline(orig_img+'.cmb')
-	daophot.expect('Output file name')
-	daophot.sendline('')
-	daophot.expect('stars renumbered?')
-	daophot.sendline('y')
-	daophot.expect('Command:')
+    check = daophot.expect(['Command:', 'OVERWRITE'])
+    if check == 1:
+        daophot.sendline('')
+        daophot.expect('Command:')
+        daophot.sendline('sort')
+    if check == 0:
+        daophot.sendline('sort')
+
+    daophot.expect('Which do you want')
+    daophot.sendline('3')
+    daophot.expect('Input file name')
+    daophot.sendline(orig_stem+'.cmb')
+    daophot.expect('Output file name')
+    daophot.sendline('')
+    check = daophot.expect(['stars renumbered?', 'OVERWRITE'])
+    if check == 1:
+        daophot.sendline('')
+        daophot.expect('stars renumbered?')
+        daophot.sendline('y')
+    if check == 0:
+        daophot.sendline('y')
+    print 'made it'
+    daophot.expect('Command:')
+    daophot.sendline('exit')
+    daophot.close(force=True)
 
 def addstar(file_stem='fake', num_images = 1, seed=5, gain=999, star_list=None,
     min_mag=12, max_mag=18, num_stars=50, verbose=0):
@@ -239,20 +258,16 @@ def addstar(file_stem='fake', num_images = 1, seed=5, gain=999, star_list=None,
         daophot.close(force=True)
 
 
-def allstar(fitsfile):
+def allstar(fitsfile, verbose=0):
 
-	file_stem = re.sub(".fits","", fitsfile)
-
-## Clean up previous runs
-        extensions = ['.als', 's.coo']
-        for ext in extensions:
-                if (os.path.isfile(file_stem + ext)):
-                        os.remove(file_stem + ext)
-    #    print "Working on " + image
+    file_stem = re.sub(".fits","", fitsfile)
 
 ## Running ALLSTAR
-	allstar = pexpect.spawn(config.dao_dir+'allstar', timeout=240)
-	#allstar.logfile = sys.stdout
+    allstar = pexpect.spawn(config.dao_dir+'allstar', timeout=240)
+
+
+    if verbose == 1:
+        allstar.logfile = sys.stdout
 
 	allstar.expect("OPT")
 	allstar.sendline("")
@@ -264,11 +279,18 @@ def allstar(fitsfile):
 	allstar.sendline("")
 	allstar.expect("File for results")
 	allstar.sendline("")
-	allstar.expect("Name for subtracted image")
-	allstar.sendline("")
-	allstar.expect("stars")
-	allstar.expect("Good bye")
-	allstar.close()
+    check = allstar.expect(["Name for subtracted image", "OVERWRITE"])
+    if check == 1:
+        allstar.sendline("")
+        allstar.expect("Name for subtracted image")
+        allstar.sendline("")
+        #print 'made it 1'
+    if check == 0:
+        allstar.sendline("")
+    #print 'made it 2'
+    allstar.expect("stars")
+    allstar.expect("Good bye")
+    allstar.close(force=True)
 
 
 # run daomatch on a list of images
