@@ -127,7 +127,7 @@ def match_optical(target, channel, opt_name='None'):
     dao.daomaster(mch_file, frame_num='2,0.5,2', verbose=1)
     os.chdir('../')
 
-def check_match(target, channel, opt_name='None'):
+def check_match(target, channel, opt_name='None', save=1):
 
     if opt_name == 'None': opt_name = target
     #data_dir = config.top_dir+target
@@ -168,7 +168,10 @@ def check_match(target, channel, opt_name='None'):
     y_new = float(y_off[1])+float(transform[1][2])*x+float(transform[1][3])*y
 
     ax1.plot(x_new, y_new, '.', markersize=1.8, color='r')
-    mp.show()
+    if save == 1:
+        mp.savefig('{}-{}-match.pdf'.format(target, channel), format='pdf')
+    else:
+        mp.show()
 
 # testing with known psf
 def mosaic_phot2(target, channel, exptime):

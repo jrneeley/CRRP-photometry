@@ -6,8 +6,8 @@ import sys
 import matplotlib.pyplot as mp
 import config
 
-def daophot(fitsfile, op=0, threshold=10, find=1, phot=1, coo_file='',
-    ap_file='', num_frames='1,1', verbose=0):
+def daophot(fitsfile, threshold=None, find=1, phot=1, coo_file='',
+    ap_file='', num_frames='1,1', opt_file='', verbose=0):
 
     dao_dir = config.dao_dir
     image = re.sub(".fits","", fitsfile)
@@ -16,16 +16,20 @@ def daophot(fitsfile, op=0, threshold=10, find=1, phot=1, coo_file='',
     daophot = pexpect.spawn(dao_dir+'daophot')
     if verbose == 1:
         daophot.logfile = sys.stdout
-# EDIT OPTIONS
-    if op == 1:
-        daophot.expect('Command:')
-        daophot.sendline('op')
-        daophot.expect('File with parameters')
-        daophot.sendline('')
+# Load appropriate opt file and edit threshold if necessary
+    daophot.expect('Command:')
+    daophot.sendline('op')
+    daophot.expect('File with parameters')
+    daophot.sendline(opt_file)
+    if threshold != None:
+        #daophot.expect('Command:')
+        #daophot.sendline('op')
+        #daophot.expect('File with parameters')
+        #daophot.sendline('')
         daophot.expect('OPT>')
         daophot.sendline('th='+str(threshold))
-        daophot.expect('OPT>')
-        daophot.sendline('')
+    daophot.expect('OPT>')
+    daophot.sendline('')
 
 
 # ATTACH
@@ -78,7 +82,7 @@ def daophot(fitsfile, op=0, threshold=10, find=1, phot=1, coo_file='',
 
 #print "Initial aperture photometry complete."
 
-def find(fitsfile, num_frames='1,1', coo_file='', verbose=0):
+def find(fitsfile, num_frames='1,1', coo_file='', opt_file='', verbose=0):
 
     dao_dir = config.dao_dir
     image = re.sub(".fits","", fitsfile)
@@ -87,6 +91,14 @@ def find(fitsfile, num_frames='1,1', coo_file='', verbose=0):
     daophot = pexpect.spawn(dao_dir+'daophot')
     if verbose == 1:
         daophot.logfile = sys.stdout
+
+# Load appropriate opt file and edit threshold if necessary
+    daophot.expect('Command:')
+    daophot.sendline('op')
+    daophot.expect('File with parameters')
+    daophot.sendline(opt_file)
+    daophot.expect('OPT>')
+    daophot.sendline('')
 
 # ATTACH
     daophot.expect("Command:")
@@ -109,40 +121,49 @@ def find(fitsfile, num_frames='1,1', coo_file='', verbose=0):
     daophot.sendline('exit')
     daophot.close(force=True)
 
-def find_psf(fitsfile):
+def find_psf(fitsfile, opt_file=''):
 
-	file_stem = re.sub(".fits","", fitsfile)
+    file_stem = re.sub(".fits","", fitsfile)
 
 ## Clean up previous runs
 
-	extensions = ['.psf', '.nei']
-	for ext in extensions:
-		if (os.path.isfile(file_stem + ext)):
-        		os.remove(file_stem + ext)
+    extensions = ['.psf', '.nei']
+    for ext in extensions:
+        if (os.path.isfile(file_stem + ext)):
+            os.remove(file_stem + ext)
 
-	image = fitsfile
-	print "Working on " + image
+    image = fitsfile
+    print "Working on " + image
 
 #Running daophot
-	daophot = pexpect.spawn(config.dao_dir+'daophot')
-	daophot.logfile = sys.stdout
+    daophot = pexpect.spawn(config.dao_dir+'daophot')
+    daophot.logfile = sys.stdout
+
+# Load appropriate opt file and edit threshold if necessary
+    daophot.expect('Command:')
+    daophot.sendline('op')
+    daophot.expect('File with parameters')
+    daophot.sendline(opt_file)
+    daophot.expect('OPT>')
+    daophot.sendline('')
+
 # attach the image
-	daophot.expect("Command:")
-	daophot.sendline("at " + file_stem)
+    daophot.expect("Command:")
+    daophot.sendline("at " + file_stem)
 ## PSF
-	daophot.expect("Command:")
-	daophot.sendline("psf")
-	daophot.expect("File with aperture results")
-	daophot.sendline("")
-	daophot.expect("File with PSF")
-	daophot.sendline("")
-	daophot.expect("File for the PSF")
-	daophot.sendline("")
+    daophot.expect("Command:")
+    daophot.sendline("psf")
+    daophot.expect("File with aperture results")
+    daophot.sendline("")
+    daophot.expect("File with PSF")
+    daophot.sendline("")
+    daophot.expect("File for the PSF")
+    daophot.sendline("")
 ## Exit Daophot
-	daophot.expect("Command:")
-	daophot.sendline("exit")
-	daophot.close(force=True)
-	print "PSF complete"
+    daophot.expect("Command:")
+    daophot.sendline("exit")
+    daophot.close(force=True)
+    print "PSF complete"
 
 
 def substar(fitsfile):
@@ -176,10 +197,6 @@ def append(fitsfile, file1=None, file2=None, verbose=0):
     if file2 == None:
         file2 = sub_stem+'.coo'
 
-#    extensions = ['.cmb', '.srt']
-#    for ext in extensions:
-#        if (os.path.isfile(orig_img + ext)): os.remove(orig_img+ext)
-
     daophot = pexpect.spawn(config.dao_dir+'daophot')
     if verbose == 1:
         daophot.logfile = sys.stdout
@@ -212,29 +229,37 @@ def append(fitsfile, file1=None, file2=None, verbose=0):
         daophot.sendline('y')
     if check == 0:
         daophot.sendline('y')
-    print 'made it'
+    #print 'made it'
     daophot.expect('Command:')
     daophot.sendline('exit')
     daophot.close(force=True)
 
-def addstar(file_stem='fake', num_images = 1, seed=5, gain=999, star_list=None,
-    min_mag=12, max_mag=18, num_stars=50, verbose=0):
+def addstar(image, file_stem='fake', num_images = 1, seed=5, gain=999, star_list=None,
+    min_mag=12, max_mag=18, num_stars=50, opt_file='', verbose=0):
 
     daophot = pexpect.spawn(config.dao_dir+'daophot')
     if verbose == 1: daophot.logfile = sys.stdout
 
+    # Make sure we are using the appropriate options file
+    daophot.expect('Command:')
+    daophot.sendline('opt')
+    daophot.expect('File with parameters')
+    daophot.sendline(opt_file)
+    daophot.expect('OPT')
+    daophot.sendline('')
+
     # First attach original image
     daophot.expect('Command:')
-    daophot.sendline('at'+file_stem+str(ii).zfill(2))
+    daophot.sendline('at '+image)
     # start addstar
     daophot.expect('Command:')
     daophot.sendline('ad')
-    daophot.expect('File with PSF')
+    daophot.expect('File with the PSF')
     daophot.sendline('')
     daophot.expect('Seed')
-    daophot.sendline(seed)
+    daophot.sendline(str(seed))
     daophot.expect('Photons per ADU')
-    daophot.sendline(gain)
+    daophot.sendline(str(gain))
     daophot.expect('Input data file')
     if star_list != None:
         daophot.sendline(star_list)
@@ -246,16 +271,26 @@ def addstar(file_stem='fake', num_images = 1, seed=5, gain=999, star_list=None,
     else:
         daophot.sendline('')
         daophot.expect('Minimum, maximum magnitudes')
-        daophot.sendline(min_mag+' '+max_mag)
+        daophot.sendline('{} {}'.format(min_mag, max_mag))
         daophot.expect('Number of stars to add')
-        daophot.sendline(num_stars)
+        daophot.sendline(str(num_stars))
         daophot.expect('Number of new frames')
-        daophot.sendline(num_images)
+        daophot.sendline(str(num_images))
         daophot.expect('File-name stem')
         daophot.sendline(file_stem)
-        daophot.expect('Command')
-        daophot.sendline('ex')
-        daophot.close(force=True)
+        check = daophot.expect(['Command', 'OVERWRITE'])
+        if check == 0:
+            daophot.sendline('ex')
+            daophot.close(force=True)
+        if check == 1:
+            daophot.sendline('')
+            for ii in range(num_images-1):
+                daophot.expect('OVERWRITE')
+                daophot.sendline('')
+            daophot.expect('Command')
+            daophot.sendline('ex')
+            daophot.close(force=True)
+
 
 
 def allstar(fitsfile, verbose=0):
@@ -420,6 +455,22 @@ def daomaster(matchfile, frame_num='12, 0.5, 12', sigma='5',
     daomaster.sendline("e")
 
     daomaster.close(force=True)
+
+def allframe(image_list, star_list, verbose=0):
+
+    # need very long timeout
+    allframe = pexpect.spawn(config.dao_dir+'allframe')
+    if verbose == 1:
+        allframe.logfile = sys.stdout
+
+    allframe.expect('OPT')
+    allframe.sendline('')
+    allframe.expect('File with list of images')
+    allframe.sendline(image_list)
+    allframe.expect('File with list of stars')
+    allframe.sendline(star_list)
+    allframe.expect('Good bye.', timeout=None)
+    allframe.close(force=True)
 
 def read_raw(raw_file):
 
