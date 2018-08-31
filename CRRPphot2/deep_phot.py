@@ -123,7 +123,7 @@ def match_optical(target, channel, opt_name='None'):
     limits = str(min_x)+','+str(max_x)+','+str(min_y)+','+str(max_y)
     image_list = ['optical:'+opt_name+'-I.mag', als_file]
     mch_file = 'op-'+channel+'.mch'
-    dao.daomatch(image_list, mch_file, xy_limits=limits)
+    dao.daomatch(image_list, mch_file, xy_limits=limits, verbose=1)
     dao.daomaster(mch_file, frame_num='2,0.5,2', verbose=1)
     os.chdir('../')
 
@@ -167,11 +167,25 @@ def check_match(target, channel, opt_name='None', save=1):
     x_new = float(x_off[1])+float(transform[1][0])*x+float(transform[1][1])*y
     y_new = float(y_off[1])+float(transform[1][2])*x+float(transform[1][3])*y
 
+    # Check that transformed coordinates are in the right window
+    xcheck = (x_new >= cuts['xmin']) & (x_new <= cuts['xmax'])
+    ycheck = (y_new >= cuts['ymin']) & (y_new <= cuts['ymax'])
+
+    num_pass_x = len(x_new[xcheck])
+    num_pass_y = len(y_new[ycheck])
+    print num_pass_x, len(x_new)
+    print num_pass_y, len(y_new)
+    if (num_pass_x == len(x_new)) & (num_pass_y == len(y_new)):
+        trans_ok = 1
+    else:
+        trans_ok = 0
     ax1.plot(x_new, y_new, '.', markersize=1.8, color='r')
     if save == 1:
         mp.savefig('{}-{}-match.pdf'.format(target, channel), format='pdf')
     else:
         mp.show()
+
+    return trans_ok
 
 # testing with known psf
 def mosaic_phot2(target, channel, exptime):

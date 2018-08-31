@@ -188,7 +188,29 @@ def substar(fitsfile):
 	daophot.sendline('ex')
 	daophot.close(force=True)
 
-def append(fitsfile, file1=None, file2=None, verbose=0):
+def offset(filename, id_offset=0, x_offset=0.0, y_offset=0.0, mag_offset=0.0):
+
+    daophot = pexpect.spawn(config.dao_dir+'daophot')
+
+    daophot.expect('Command')
+    daophot.sendline('off')
+    daophot.expect('Input file name')
+    daophot.sendline(filename)
+    daophot.expect('Additive offsets')
+    off_string = '{} {} {} {}'.format(id_offset, x_offset, y_offset, mag_offset)
+    daophot.sendline(off_string)
+    daophot.expect('Output file name')
+    daophot.sendline('')
+    check = daophot.expect(['Command', 'OVERWRITE'])
+    if check == 1:
+        daophot.sendline('')
+        daophot.expect('Command')
+        daophot.sendline('ex')
+    if check == 0:
+        daophot.sendline('ex')
+    daophot.close(force=True)
+
+def append(fitsfile, file1=None, file2=None, renumber='n', verbose=0):
 
     orig_stem = re.sub('.fits', '', fitsfile)
     sub_stem = re.sub('dn', 'dns', orig_stem)
@@ -226,9 +248,9 @@ def append(fitsfile, file1=None, file2=None, verbose=0):
     if check == 1:
         daophot.sendline('')
         daophot.expect('stars renumbered?')
-        daophot.sendline('y')
+        daophot.sendline(renumber)
     if check == 0:
-        daophot.sendline('y')
+        daophot.sendline(renumber)
     #print 'made it'
     daophot.expect('Command:')
     daophot.sendline('exit')
@@ -438,11 +460,15 @@ def daomaster(matchfile, frame_num='12, 0.5, 12', sigma='5',
     daomaster.sendline(new_id)
     daomaster.expect("A file with mean magnitudes")
     daomaster.sendline(mag_file)
-    if mag_file == 'y':
-        daomaster.expect("New output")
-        daophot.sendline(magfile)
-    daomaster.expect("A file with corrected magnitudes")
+    check = daomaster.expect(['Output file name', 'A file with corrected magnitudes'])
+    if check == 0:
+        daomaster.sendline('')
+        check2 = daomaster.expect(['OVERWRITE', 'A file with corrected magnitudes'])
+        if check2 == 0:
+            daomaster.sendline('')
+            daomaster.expect('A file with corrected magnitudes')
     daomaster.sendline(corr_file)
+
     daomaster.expect("A file with raw magnitudes")
     daomaster.sendline(raw_file)
     daomaster.expect("A file with the new transformations")
