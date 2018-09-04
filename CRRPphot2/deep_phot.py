@@ -79,7 +79,7 @@ def mosaic_phot(target, channel, exptime):
     os.chdir(data_dir)
     print 'Changed directory to {}'.format(data_dir)
 
-def match_optical(target, channel, opt_name='None'):
+def match_optical(target, channel, opt_name='None', restrict=0, verbose=0):
 
     if opt_name == 'None': opt_name = target
     deep_mosaic_fits = target+'_'+channel+'_deep.fits'
@@ -108,23 +108,29 @@ def match_optical(target, channel, opt_name='None'):
     print "Xmin, Xmax, Ymin, Ymax for optical catalog:"
     print min_x, max_x, min_y, max_y
 
-    xmin = [min_x]
-    xmax = [max_x]
-    ymin = [min_y]
-    ymax = [max_y]
+    xmin = int(min_x)
+    xmax = int(max_x)
+    ymin = int(min_y)
+    ymax = int(max_y)
     f = ['Deep']
 
+    if restrict == 1:
+        xmin += 10
+        xmax += -10
+        ymin += 10
+        ymax += -10
+
 # Save boundary window for each field into a text file (e.g. I1-catalog-cuts.txt)
-    data_save = np.array(zip(f, xmin, xmax, ymin, ymax), dtype=[('c1', 'S8'),
+    data_save = np.array(zip(f, [xmin], [xmax], [ymin], [ymax]), dtype=[('c1', 'S8'),
         ('c2', float), ('c3', float), ('c4', float), ('c5', float)])
     np.savetxt(channel+'-deep-cuts.txt', data_save, comments='', fmt='%s %0.3f %0.3f %0.3f %0.3f')
 
     print 'Matching optical and MIR catalogs...'
-    limits = str(min_x)+','+str(max_x)+','+str(min_y)+','+str(max_y)
+    limits = '{} {} {} {}'.format(xmin, xmax, ymin, ymax)
     image_list = ['optical:'+opt_name+'-I.mag', als_file]
     mch_file = 'op-'+channel+'.mch'
-    dao.daomatch(image_list, mch_file, xy_limits=limits, verbose=1)
-    dao.daomaster(mch_file, frame_num='2,0.5,2', verbose=1)
+    dao.daomatch(image_list, mch_file, xy_limits=limits, verbose=verbose)
+    dao.daomaster(mch_file, frame_num='1,0.5,1', verbose=verbose)
     os.chdir('../')
 
 def check_match(target, channel, opt_name='None', save=1):
@@ -186,6 +192,15 @@ def check_match(target, channel, opt_name='None', save=1):
         mp.show()
 
     return trans_ok
+
+# UNFINISHED!!!
+def make_regions(mag_file, mch_file):
+
+    files, x_off, y_off, transform, dof = dao.read_mch(mch_file)
+
+    x_new = float(x_off[1])+float(transform[1][0])*x+float(transform[1][1])*y
+    y_new = float(y_off[1])+float(transform[1][2])*x+float(transform[1][3])*y
+
 
 # testing with known psf
 def mosaic_phot2(target, channel, exptime):

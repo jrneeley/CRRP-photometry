@@ -369,10 +369,10 @@ def daomatch(image_list, output_file, verbose=0,
         daomatch.sendline(first_file)
     daomatch.expect("Output file")
     daomatch.sendline(output_file)
-    check = daomatch.expect(["Next input file", "New output file"])
+    check = daomatch.expect(["Next input file", "OVERWRITE"])
     if check == 1:
         daomatch.sendline("")
-
+        daomatch.expect("Next input file")
     # define appropriate suffix for images
     suffix = ''
     if force_scale_rot == 1:
@@ -388,15 +388,12 @@ def daomatch(image_list, output_file, verbose=0,
 #            if check == 0:
         daomatch.sendline(image+suffix)
         check = daomatch.expect(["Next input file", "Write this transformation"])
-
         if check == 1:
-            daomatch.sendline('y')
+            daomatch.sendline("y")
+            daomatch.expect("Next input file")
         if check == 0:
             continue
-#            daomatch.expect('Next input file')
-#            daomatch.sendline(image+suffix)
 
-#    daomatch.expect("Next input file")
     daomatch.sendline("")
     daomatch.expect("Good bye")
     daomatch.close()
