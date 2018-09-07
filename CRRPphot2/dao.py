@@ -305,6 +305,56 @@ def append(fitsfile, file1=None, file2=None, renumber='n', verbose=0):
     daophot.sendline('exit')
     daophot.close(force=True)
 
+def append(file1, file2, out_file='', verbose=0):
+
+    daophot = pexpect.spawn(config.dao_dir+'daophot')
+    if verbose == 1:
+        daophot.logfile = sys.stdout
+	daophot.expect('Command:')
+	daophot.sendline('append')
+	daophot.expect('First input file')
+	daophot.sendline(file1)
+	daophot.expect('Second input file')
+	daophot.sendline(file2)
+	daophot.expect('Output file')
+	daophot.sendline(out_file)
+    check = daophot.expect(['Command:', 'OVERWRITE'])
+    if check == 1:
+        daophot.sendline('')
+        daophot.expect('Command:')
+    daophot.sendline('exit')
+    daophot.close(force=True)
+
+def sort(in_file, out_file='', sort_option='3', renumber='y', verbose=0):
+
+    # sort_option +- 1 -> increasing/decreasing ID number
+    # sort option +- 2 -> increasing/decreasing X
+    # sort option +- 3 -> increasing/decreasing Y
+    # sort option +- 4 -> increasing/decreasing magnitude
+
+    daophot = pexpect.spawn(config.dao_dir+'daophot')
+    if verbose == 1:
+        daophot.logfile = sys.stdout
+	daophot.expect('Command:')
+	daophot.sendline('sort')
+    daophot.expect('Which do you want')
+    daophot.sendline(sort_option)
+    daophot.expect('Input file name')
+    daophot.sendline(in_file)
+    daophot.expect('Output file name')
+    daophot.sendline(out_file)
+    check = daophot.expect(['stars renumbered?', 'OVERWRITE'])
+    if check == 1:
+        daophot.sendline('')
+        daophot.expect('stars renumbered?')
+        daophot.sendline(renumber)
+    if check == 0:
+        daophot.sendline(renumber)
+    #print 'made it'
+    daophot.expect('Command:')
+    daophot.sendline('exit')
+    daophot.close(force=True)
+
 def addstar(image, file_stem='fake', num_images = 1, seed=5, gain=999, star_list=None,
     min_mag=12, max_mag=18, num_stars=50, opt_file='', verbose=0):
 

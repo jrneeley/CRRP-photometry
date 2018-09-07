@@ -99,14 +99,14 @@ def match_optical(target, channel, opt_name='None', restrict=0, verbose=0):
     ymax = np.max(data['y'])
 
     print "Calculating optical boundaries..."
-    print xmin, xmax, ymin, ymax
+    #print xmin, xmax, ymin, ymax
     ra1, ra2, dec1, dec2 = coordinates.find_coord_window_mosaic(deep_mosaic_fits, xmin, xmax, ymin, ymax)
-    print ra1, ra2, dec1, dec2
+    #print ra1, ra2, dec1, dec2
     min_x, min_y = coordinates.radec2catalogpix(ra1, dec1, catalog_x, catalog_y, catalog_ra, catalog_dec)
     max_x, max_y = coordinates.radec2catalogpix(ra2, dec2, catalog_x, catalog_y, catalog_ra, catalog_dec)
 #		c1, c2, c3, c4 = coordinates.radec2pix(target, x1, x2, y1, y2, xcat, ycat, ra, dec)
-    print "Xmin, Xmax, Ymin, Ymax for optical catalog:"
-    print min_x, max_x, min_y, max_y
+    #print "Xmin, Xmax, Ymin, Ymax for optical catalog:"
+    #print min_x, max_x, min_y, max_y
 
     xmin = int(min_x)
     xmax = int(max_x)
@@ -122,8 +122,8 @@ def match_optical(target, channel, opt_name='None', restrict=0, verbose=0):
 
 # Save boundary window for each field into a text file (e.g. I1-catalog-cuts.txt)
     data_save = np.array(zip(f, [xmin], [xmax], [ymin], [ymax]), dtype=[('c1', 'S8'),
-        ('c2', float), ('c3', float), ('c4', float), ('c5', float)])
-    np.savetxt(channel+'-deep-cuts.txt', data_save, comments='', fmt='%s %0.3f %0.3f %0.3f %0.3f')
+        ('c2', int), ('c3', int), ('c4', int), ('c5', int)])
+    np.savetxt(channel+'-deep-cuts.txt', data_save, comments='', fmt='%s %i %i %i %i')
 
     print 'Matching optical and MIR catalogs...'
     limits = '{} {} {} {}'.format(xmin, xmax, ymin, ymax)
@@ -174,13 +174,13 @@ def check_match(target, channel, opt_name='None', save=1):
     y_new = float(y_off[1])+float(transform[1][2])*x+float(transform[1][3])*y
 
     # Check that transformed coordinates are in the right window
-    xcheck = (x_new >= cuts['xmin']) & (x_new <= cuts['xmax'])
-    ycheck = (y_new >= cuts['ymin']) & (y_new <= cuts['ymax'])
+    xcheck = (x_new >= cuts['xmin']-5) & (x_new <= cuts['xmax']+5)
+    ycheck = (y_new >= cuts['ymin']-5) & (y_new <= cuts['ymax']+5)
 
     num_pass_x = len(x_new[xcheck])
     num_pass_y = len(y_new[ycheck])
-    print num_pass_x, len(x_new)
-    print num_pass_y, len(y_new)
+    #print num_pass_x, len(x_new)
+    #print num_pass_y, len(y_new)
     if (num_pass_x == len(x_new)) & (num_pass_y == len(y_new)):
         trans_ok = 1
     else:
