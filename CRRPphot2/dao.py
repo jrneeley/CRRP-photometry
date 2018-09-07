@@ -121,6 +121,55 @@ def find(fitsfile, num_frames='1,1', coo_file='', opt_file='', verbose=0):
     daophot.sendline('exit')
     daophot.close(force=True)
 
+def phot(fitsfile, phot_file='', coo_file='', ap_file='', opt_file='', verbose=1):
+
+    dao_dir = config.dao_dir
+    image = re.sub(".fits","", fitsfile)
+
+## Running daophot
+    daophot = pexpect.spawn(dao_dir+'daophot')
+    if verbose == 1:
+        daophot.logfile = sys.stdout
+
+# Load appropriate opt file and edit threshold if necessary
+    daophot.expect('Command:')
+    daophot.sendline('op')
+    daophot.expect('File with parameters')
+    daophot.sendline(opt_file)
+    daophot.expect('OPT>')
+    daophot.sendline('')
+
+# ATTACH
+    daophot.expect("Command:")
+    daophot.sendline("at " + image)
+
+# PHOT
+    daophot.expect("Command:")
+    daophot.sendline("phot")
+    daophot.expect("File with aperture radii")
+    daophot.sendline("")
+    daophot.expect("PHO>")
+    daophot.sendline("")
+    check = daophot.expect(['Input position file', 'Profile-fitting photometry'])
+    if check == 1:
+        daophot.sendline('e')
+        daophot.expect('Input position file')
+        daophot.sendline(coo_file)
+    if check == 0:
+        daophot.sendline(coo_file)
+        daophot.expect("Output file")
+        daophot.sendline(ap_file)
+
+## Exit Daophot
+    check2 = daophot.expect(['Command:', 'OVERWRITE'])
+    if check2 == 1:
+        daophot.sendline('')
+        daophot.expect('Command:')
+        daophot.sendline('exit')
+    if check2 == 0:
+        daophot.sendline("exit")
+    daophot.close(force=True)
+
 def find_psf(fitsfile, opt_file=''):
 
     file_stem = re.sub(".fits","", fitsfile)
@@ -606,3 +655,49 @@ def read_coo_new(coo_file):
     data = np.loadtxt(coo_file, dtype=dtype1, usecols=(0,1,2,3,4,5), skiprows=3)
 
     return data
+
+def read_add(add_file):
+
+    dtype = np.dtype([('id', int), ('x', float), ('y', float), ('mag', float)])
+    data = np.loadtxt(add_file, dtype=dtype, skiprows=3)
+
+    return data
+
+def write_mag(ids, x, y, mags, out_file, errs=None, err1=None, frames=None, chi=None,
+    sharp=None, var=None, blunder=None):
+
+    header_line1 = ' NL    NX    NY  LOWBAD HIGHBAD  THRESH     AP1  PH/ADU  RNOISE    FRAD\n'
+    header_line2 = '  1  4013  4766  -500.0 32766.5   0.000   0.000   0.000   0.000   0.000\n\n'
+    head = header_line1+'\n'+header_line2+'\n'
+
+    f = open(out_file, 'w')
+    f.write(header_line1)
+    f.write(header_line2)
+    f.close()
+
+    f = open(out_file, 'a')
+
+    n_stars = len(ids)
+
+    if errs == None:
+        errs = np.repeat(0.0001, n_stars)
+    if err1 == None:
+        err1 = np.repeat(0.0000, n_stars)
+    if frames == None:
+        frames = np.repeat(1., n_stars)
+    if chi == None:
+        chi = np.repeat(0.000, n_stars)
+    if sharp == None:
+        sharp = np.repeat(0.000, n_stars)
+    if var == None:
+        var = np.repeat(0.00, n_stars)
+    if blunder == None:
+        blunder = np.repeat(1.000, n_stars)
+    #dtype = np.dtype([('1', int), ('2', float), ('3', float), ('4', float), \
+    #    ('5', float), ('6', float), ('7', float), ('8')])
+    data_save = np.array(zip(ids, x, y, mags, errs, err1, frames, chi, sharp, \
+        var, blunder))
+
+    np.savetxt(f, data_save,
+        fmt='%8i %8.3f %8.3f %8.3f %8.4f %8.4f %8.0f %8.3f %8.3f %8.2f %8.3f')
+    f.close()
