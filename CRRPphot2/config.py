@@ -1,6 +1,6 @@
 
 top_dir = '/mnt/data/public/jill/CRRP/SinglePSF/'
-t_dir = '/mnt/data/public/jill/CRRP/'
-opt_dir = t_dir+'OPTfiles/'
-optical_dir = t_dir+'OpticalCatalogs/'
-dao_dir = '/apps/daophot32/'
+t_dir = '/Users/Jill/CRRP/NGC3201/'
+opt_dir = '/Users/Jill/CRRP/NGC3201/OPTfiles/'
+optical_dir = '/Users/Jill/CRRP/NGC3201/optical/'
+dao_dir = '/usr/local/phot/'

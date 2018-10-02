@@ -451,7 +451,7 @@ def allstar(fitsfile, verbose=0):
 
 # run daomatch on a list of images
 def daomatch(image_list, output_file, verbose=0,
-                    xy_limits=None, force_scale_rot=0, force_scale=0):
+                    xy_limits=[], force_scale_rot=0, force_scale=0):
 
 ## run DAOMATCH on on fields
     daomatch = pexpect.spawn(config.dao_dir+'daomatch')
@@ -460,12 +460,16 @@ def daomatch(image_list, output_file, verbose=0,
 
     daomatch.expect("Master input file")
     first_file = image_list[0]
-    if xy_limits != None:
+    if len(xy_limits) == 4:
         daomatch.sendline(first_file+'*')
         daomatch.expect('Ymin, Ymax')
-        daomatch.sendline(xy_limits)
-    if xy_limits == None:
+        xylim = '{} {} {} {}'.format(xy_limits[0], xy_limits[1], xy_limits[2], xy_limits[3])
+        daomatch.sendline(xylim)
+    elif len(xy_limits) == 0:
         daomatch.sendline(first_file)
+    else:
+        daomatch.close(force=True)
+        print 'Must provide 4 limits! (xmin, xmax, ymin, ymax)'
     daomatch.expect("Output file")
     daomatch.sendline(output_file)
     check = daomatch.expect(["Next input file", "OVERWRITE"])
@@ -478,7 +482,7 @@ def daomatch(image_list, output_file, verbose=0,
         suffix = ';'
     if force_scale != 0:
         suffix = '/'+str(force_scale)
-    if xy_limits != None:
+    if len(xy_limits) != 0:
         suffix += '!'
 
     for image in image_list:
@@ -637,26 +641,36 @@ def read_mag(mag_file):
 
 def read_mch(mch_file):
 
-    file_list = []
-    x_offset = []
-    y_offset = []
-    transform_matrix = []
     f = open(mch_file, 'r')
-    for line in f:
+    lines = f.readlines()
+    n_lines = len(lines)
+
+    dt = np.dtype([('file', 'S30'), ('x_offset', float), ('y_offset', float), ('transform_matrix', float, (4,))])
+    simple_transform = np.zeros(n_lines, dtype=dt)
+
+    file_list = np.zeros(n_lines, dtype='S30')
+    x_offset = np.zeros(n_lines)
+    y_offset = np.zeros(n_lines)
+    transform = np.zeros((n_lines, 4))
+
+    for ii, line in enumerate(lines):
         temp = line.split()
-        n=len(temp[0])
         file_name = temp[0].replace('\'','')
         file_name = file_name.split(':')
         if len(file_name) == 1:
-            file_list.append(file_name[0])
+            file_list[ii] = file_name[0]
         if len(file_name) != 1:
-            file_list.append(file_name[1])
-        x_offset.append(temp[2])
-        y_offset.append(temp[3])
-        transform_matrix.append(temp[4:-2])
-    dof = len(transform_matrix[1])
+            file_list[ii] = file_name[1]
+        x_offset[ii] = temp[2]
+        y_offset[ii] = temp[3]
+        transform[ii] = temp[4:8]
 
-    return file_list, x_offset, y_offset, transform_matrix, dof
+    simple_transform['file'] = file_list
+    simple_transform['x_offset'] = x_offset
+    simple_transform['y_offset'] = y_offset
+    simple_transform['transform_matrix'] = transform
+
+    return simple_transform
 
 def read_nmg(nmg_file):
 

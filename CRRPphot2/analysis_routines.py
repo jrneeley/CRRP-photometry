@@ -196,7 +196,8 @@ def read_merged_catalog(target):#, center_ra, center_dec):
     data_dir = config.top_dir+target
 
     # determine number of columns to know format
-    f = open(data_dir+'/merged-deep-catalog.txt', 'r')
+    #f = open(data_dir+'/merged-deep-catalog.txt', 'r')
+    f = open('merged-deep-catalog.txt', 'r')
     head = f.readline()
     head = f.readline()
     head = f.readline()
@@ -245,6 +246,6 @@ def read_merged_catalog(target):#, center_ra, center_dec):
             ('ra_h', int), ('ra_m', int), ('ra_s', float),
             ('dec_d', int), ('dec_m', int), ('dec_s', float), ('rad_dist', float)])
 
-    data = np.loadtxt(data_dir+'/merged-deep-catalog.txt', dtype=dtype_comb)
-
+    #data = np.loadtxt(data_dir+'/merged-deep-catalog.txt', dtype=dtype_comb)
+    data = np.loadtxt('merged-deep-catalog.txt', dtype=dtype_comb)
     return data
