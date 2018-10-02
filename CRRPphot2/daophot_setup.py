@@ -6,18 +6,14 @@ from astropy.io import fits
 import config
 
 
-def spitzer_flux2dn(image, newname="", exptime=None, fluxconv=None, pixratio=1):
+def spitzer_flux2dn(image, newname="", exptime=0, fluxconv=0, pixratio=1):
 
 	# need to use exptime, not frametime
 	if exptime == 2: exptime = 1.2
 	if exptime == 6: exptime = 6
-	if exptime == 12: exptime = 12
+	if exptime == 12: exptime = 10.4
 	if exptime == 30: exptime = 23.6
 	if exptime == 100: exptime = 100
-
-	# change default fluxconv if not in native pixel ratio
-	if pixratio != 1:
-		fluxconv *= pixratio
 
 	if (newname == ""):
 		newname = re.sub(".fits", "_dn.fits", image)
@@ -25,8 +21,12 @@ def spitzer_flux2dn(image, newname="", exptime=None, fluxconv=None, pixratio=1):
 	hdulist = fits.open(newname, mode='update')
 	prihdr = hdulist[0].header
 	scidata = hdulist[0].data
-	if exptime == None : exptime = prihdr['exptime']
-	if fluxconv == None : fluxconv = prihdr['fluxconv']
+	if exptime == 0 : exptime = prihdr['exptime']
+	if fluxconv == 0 : fluxconv = prihdr['fluxconv']
+	# change default fluxconv if not in native pixel ratio
+	if pixratio != 1:
+		fluxconv *= pixratio
+
 	scidata *= exptime/fluxconv
 
 

@@ -157,8 +157,8 @@ def phot(fitsfile, phot_file='', coo_file='', ap_file='', opt_file='', verbose=1
         daophot.sendline(coo_file)
     if check == 0:
         daophot.sendline(coo_file)
-        daophot.expect("Output file")
-        daophot.sendline(ap_file)
+    daophot.expect("Output file")
+    daophot.sendline(ap_file)
 
 ## Exit Daophot
     check2 = daophot.expect(['Command:', 'OVERWRITE'])
@@ -531,11 +531,13 @@ def daomaster(matchfile, frame_num='12, 0.5, 12', sigma='5',
             transformation='20', new_id='n', mag_file='n', corr_file='n',
             raw_file='n', new_trans='y', verbose=0,
             match_radii=[-4, 3, 3, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1]):
+# IN PROGRESS - FIX SO ALL OPTIONS WORK
 
 ## Clean up previous runs
-    magfile=re.sub(".mch", ".mag", matchfile)
-    if (os.path.isfile(magfile)):
-            os.remove(magfile)
+#    magfile=re.sub(".mch", ".mag", matchfile)
+#    if (os.path.isfile(magfile)):
+#            os.remove(magfile)
+
     daomaster = pexpect.spawn(config.dao_dir+'daomaster')
     if verbose == 1:
         daomaster.logfile = sys.stdout
@@ -568,10 +570,15 @@ def daomaster(matchfile, frame_num='12, 0.5, 12', sigma='5',
             daomaster.sendline('')
             daomaster.expect('A file with corrected magnitudes')
     daomaster.sendline(corr_file)
-
     daomaster.expect("A file with raw magnitudes")
     daomaster.sendline(raw_file)
-    daomaster.expect("A file with the new transformations")
+    check = daomaster.expect(['Output file name', 'A file with the new transformations'])
+    if check == 0:
+        daomaster.sendline('')
+        check2 = daomaster.expect(['OVERWRITE', 'A file with the new transformations'])
+        if check2 == 0:
+            daomaster.sendline('')
+            daomaster.expect('A file with the new transformations')
     daomaster.sendline(new_trans)
     daomaster.expect("Output file name")
     daomaster.sendline("")
