@@ -259,7 +259,7 @@ def offset(filename, id_offset=0, x_offset=0.0, y_offset=0.0, mag_offset=0.0):
         daophot.sendline('ex')
     daophot.close(force=True)
 
-def append(fitsfile, file1=None, file2=None, renumber='n', verbose=0):
+def append_old(fitsfile, file1=None, file2=None, renumber='n', verbose=0):
 
     orig_stem = re.sub('.fits', '', fitsfile)
     sub_stem = re.sub('dn', 'dns', orig_stem)
@@ -414,27 +414,33 @@ def addstar(image, file_stem='fake', num_images = 1, seed=5, gain=999, star_list
 
 
 
-def allstar(fitsfile, verbose=0):
+def allstar(fitsfile, new_options=0, verbose=0):
 
     file_stem = re.sub(".fits","", fitsfile)
 
 ## Running ALLSTAR
     allstar = pexpect.spawn(config.dao_dir+'allstar', timeout=240)
 
-
     if verbose == 1:
         allstar.logfile = sys.stdout
 
-	allstar.expect("OPT")
-	allstar.sendline("")
-	allstar.expect("Input image name")
-	allstar.sendline(file_stem)
-	allstar.expect("File with the PSF")
-	allstar.sendline("")
-	allstar.expect("Input file")
-	allstar.sendline("")
-	allstar.expect("File for results")
-	allstar.sendline("")
+    allstar.expect("OPT")
+    if new_options == 0:
+        allstar.sendline("")
+    else:
+        n_changes=len(new_options)
+        for ii in range(n_changes):
+            allstar.sendline(new_options[ii])
+            allstar.expect("OPT")
+        allstar.sendline("")
+    allstar.expect("Input image name")
+    allstar.sendline(file_stem)
+    allstar.expect("File with the PSF")
+    allstar.sendline("")
+    allstar.expect("Input file")
+    allstar.sendline("")
+    allstar.expect("File for results")
+    allstar.sendline("")
     check = allstar.expect(["Name for subtracted image", "OVERWRITE"])
     if check == 1:
         allstar.sendline("")
@@ -444,7 +450,7 @@ def allstar(fitsfile, verbose=0):
     if check == 0:
         allstar.sendline("")
     #print 'made it 2'
-    allstar.expect("stars")
+    #allstar.expect("stars")
     allstar.expect("Good bye")
     allstar.close(force=True)
 
@@ -533,10 +539,6 @@ def daomaster(matchfile, frame_num='12, 0.5, 12', sigma='5',
             match_radii=[-4, 3, 3, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1]):
 # IN PROGRESS - FIX SO ALL OPTIONS WORK
 
-## Clean up previous runs
-#    magfile=re.sub(".mch", ".mag", matchfile)
-#    if (os.path.isfile(magfile)):
-#            os.remove(magfile)
 
     daomaster = pexpect.spawn(config.dao_dir+'daomaster')
     if verbose == 1:

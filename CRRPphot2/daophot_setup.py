@@ -9,11 +9,12 @@ import config
 def spitzer_flux2dn(image, newname="", exptime=0, fluxconv=0, pixratio=1):
 
 	# need to use exptime, not frametime
+	if exptime == 0.4: exptime = 0.2
 	if exptime == 2: exptime = 1.2
-	if exptime == 6: exptime = 6
+	if exptime == 6: exptime = 6 ###
 	if exptime == 12: exptime = 10.4
 	if exptime == 30: exptime = 23.6
-	if exptime == 100: exptime = 100
+	if exptime == 100: exptime = 100 ###
 
 	if (newname == ""):
 		newname = re.sub(".fits", "_dn.fits", image)
