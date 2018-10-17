@@ -1,6 +1,7 @@
 
-top_dir = '/mnt/data/public/jill/CRRP/SinglePSF/'
-t_dir = '/mnt/data/public/jill/CRRP/'
-opt_dir = t_dir+'OPTfiles/'
-optical_dir = t_dir+'OpticalCatalogs/'
+#top_dir = '/mnt/data/public/jill/'
+#t_dir = '/Users/Jill/CRRP/NGC3201/'
+opt_dir = '/mnt/data/public/jill/CRRP/OPTfiles/'
+optical_dir = '/mnt/data/public/jill/CRRP/OpticalCatalogs/'
 dao_dir = '/apps/daophot32/'
+psf_dir = '/home/jill/irac_dao_calibration/psf/'

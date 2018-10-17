@@ -9,7 +9,7 @@ def merge_opt_deep_catalogs(target, cluster_coord=None, opt_name='None'):
 
     if opt_name == 'None': opt_name = target
     optical_dir = config.optical_dir
-    data_dir = config.top_dir+target
+    #data_dir = config.top_dir+target
 
     # read in optical and nir catalogs if they exist
     include_opt = 0
@@ -33,15 +33,18 @@ def merge_opt_deep_catalogs(target, cluster_coord=None, opt_name='None'):
     dtype1 = np.dtype([('id', int), ('3.6', float), ('3.6err', float)])
     dtype2 = np.dtype([('id', int), ('4.5', float), ('4.5err', float)])
     print 'Reading MIR catalog for '+target+'...'
-    irac1_file = data_dir+'/newmosaics/I1-deep.cal'
-    irac2_file = data_dir+'/newmosaics/I2-deep.cal'
+    irac1_file = 'Deepmosaic/I1-deep.cal'
+    irac2_file = 'Deepmosaic/I2-deep.cal'
     if os.path.isfile(irac1_file) == 0:
         print 'I1 is uncalibrated!!!'
-        irac1_file = data_dir+'/DeepMosaic/'+target+'_I1_deep_dn.alf'
+        #irac1_file = 'DeepMosaic/'+target+'_I1_deep_dn.alf'
+        irac1_file = '{}_I1_deep_dn.alf'.format(target, target)
+        #irac1_file = '{}/I1-alf.mag'.format(target)
     if os.path.isfile(irac2_file) == 0:
         print 'I2 is uncalibrated!!!'
-        irac2_file = data_dir+'/DeepMosaic/'+target+'_I2_deep_dn.alf'
-
+        #irac2_file = 'DeepMosaic/'+target+'_I2_deep_dn.alf'
+        irac2_file = '{}_I2_deep_dn.alf'.format(target, target)
+        #irac2_file = '{}/I2-alf.mag'.format(target)
     data3p6 = np.loadtxt(irac1_file, dtype=dtype1, usecols=(0,3,4), skiprows=3)
     data4p5 = np.loadtxt(irac2_file, dtype=dtype2, usecols=(0,3,4), skiprows=3)
 
@@ -98,7 +101,7 @@ def merge_opt_deep_catalogs(target, cluster_coord=None, opt_name='None'):
                 opt_data['ra_h'], opt_data['ra_m'], opt_data['ra_s'], opt_data['dec_d'],
                 opt_data['dec_m'], opt_data['dec_s'], rad_dist), dtype=dtype_comb)
 
-            np.savetxt(data_dir+'/merged-deep-catalog.txt', data_save,
+            np.savetxt(target+'-merged-catalog.txt', data_save,
                 fmt='%8i %8.2f %8.2f ' + 7*'%6.3f %6.4f ' + 7*'%4i ' + 5*'%6.3f '+'%6.1f %6.3f %3i %02i %05.2f %+03i %02i %04.1f %0.2f',
                 header=head)
 
@@ -134,7 +137,7 @@ def merge_opt_deep_catalogs(target, cluster_coord=None, opt_name='None'):
                 opt_data['ra_h'], opt_data['ra_m'], opt_data['ra_s'], opt_data['dec_d'],
                 opt_data['dec_m'], opt_data['dec_s'], rad_dist), dtype=dtype_comb)
 
-            np.savetxt(data_dir+'/merged-deep-catalog.txt', data_save,
+            np.savetxt('merged-deep-catalog.txt', data_save,
                 fmt='%8i %8.2f %8.2f ' + 10*'%6.3f %6.4f ' + 10*'%4i ' + 5*'%6.3f '+'%6.1f %6.3f %3i %02i %05.2f %+03i %02i %04.1f %0.2f',
                 header=head)
 
@@ -184,19 +187,21 @@ def merge_opt_deep_catalogs(target, cluster_coord=None, opt_name='None'):
             nir_data['ra_h'], nir_data['ra_m'], nir_data['ra_s'], nir_data['dec_d'],
             nir_data['dec_m'], nir_data['dec_s'], rad_dist2), dtype=dtype_comb)
 
-        np.savetxt(data_dir+'/merged-deep-catalog.txt', data_save,
+        np.savetxt('merged-deep-catalog.txt', data_save,
             fmt='%8i %8.2f %8.2f ' + 5*'%6.3f %6.4f ' + 5*'%4i ' + 5*'%6.3f '+'%6.1f %6.3f %3i %02i %05.2f %+03i %02i %04.1f %0.2f',
             header=head)
 
 
 
 
-def read_merged_catalog(target):#, center_ra, center_dec):
+def read_merged_catalog(catalog):#, center_ra, center_dec):
 
-    data_dir = config.top_dir+target
-
+    #data_dir = config.top_dir+target
+    data_dir = ''
     # determine number of columns to know format
-    f = open(data_dir+'/merged-deep-catalog.txt', 'r')
+    #f = open(data_dir+'/merged-deep-catalog.txt', 'r')
+    #f = open('merged-deep-catalog.txt', 'r')
+    f = open(catalog, 'r')
     head = f.readline()
     head = f.readline()
     head = f.readline()
@@ -245,6 +250,6 @@ def read_merged_catalog(target):#, center_ra, center_dec):
             ('ra_h', int), ('ra_m', int), ('ra_s', float),
             ('dec_d', int), ('dec_m', int), ('dec_s', float), ('rad_dist', float)])
 
-    data = np.loadtxt(data_dir+'/merged-deep-catalog.txt', dtype=dtype_comb)
-
+    #data = np.loadtxt(data_dir+'/merged-deep-catalog.txt', dtype=dtype_comb)
+    data = np.loadtxt(catalog, dtype=dtype_comb)
     return data

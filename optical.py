@@ -41,7 +41,7 @@ def read_optical_fnl(target):
 
     catalog = config.optical_dir+target+'.fnl'
 
-    print "Reading optical catalog for "+target+"..."
+    #print "Reading optical catalog for "+target+"..."
 
     dtype1 = np.dtype([('id', int), ('x', float), ('y', float), ('ra_h', int),
         ('ra_m', int), ('ra_s', float), ('dec_d', int), ('dec_m', int),
@@ -60,8 +60,17 @@ def read_optical_fnl(target):
 
     ra, dec = coordinates.hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s)
 
-    print "Finished reading optical catalog."
-    return(id_num, x, y, ra, dec)
+    #print "Finished reading optical catalog."
+
+    dt = np.dtype([('id', int), ('x', float), ('y', float), ('ra', float), ('dec', float)])
+    data_out = np.zeros(len(x), dtype=dt)
+    data_out['id'] = data['id']
+    data_out['x'] = data['x']
+    data_out['y'] = data['y']
+    data_out['ra'] = ra
+    data_out['dec'] = dec
+    #return(id_num, x, y, ra, dec)
+    return data_out
 
 def read_fnl_w_radial_dist(target, center_ra, center_dec, nir=0):
 

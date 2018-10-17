@@ -39,34 +39,41 @@ def find_coord_window(img_list):
 
     return(bxmin, bxmax, bymin, bymax)
 
-def find_coord_window_mosaic(img, xmin, xmax, ymin, ymax):
+def find_coord_window_mosaic(img, xy_limits=[0,256,0,256]):
 
     w = WCS(img)
-    x1, y1 = w.wcs_pix2world(xmin, ymin, 0)
-    x2, y2 = w.wcs_pix2world(xmin, ymax, 0)
-    x3, y3 = w.wcs_pix2world(xmax, ymin, 0)
-    x4, y4 = w.wcs_pix2world(xmax, ymax, 0)
+    r1, d1 = w.wcs_pix2world(xy_limits[0], xy_limits[2], 0)
+    r2, d2 = w.wcs_pix2world(xy_limits[0], xy_limits[3], 0)
+    r3, d3 = w.wcs_pix2world(xy_limits[1], xy_limits[2], 0)
+    r4, d4 = w.wcs_pix2world(xy_limits[1], xy_limits[3], 0)
 
-    bxmin = min(x1, x2, x3, x4)
-    bxmax = max(x1, x2, x3, x4)
-    bymin = min(y1, y2, y3, y4)
-    bymax = max(y1, y2, y3, y4)
+    ra_min = min(r1, r2, r3, r4)
+    ra_max = max(r1, r2, r3, r4)
+    dec_min = min(d1, d2, d3, d4)
+    dec_max = max(d1, d2, d3, d4)
 
-    return(bxmin, bxmax, bymin, bymax)
+    world_limits = np.array([ra_min, ra_max, dec_min, dec_max])
+    #return(bxmin, bxmax, bymin, bymax)
+    return world_limits
 
 # Convert celestial coordinates to pixels using optical catalog
-def radec2catalogpix(ra_in, dec_in, catalog_x, catalog_y, catalog_ra, catalog_dec):
+def radec2catalogpix(ra_in, dec_in, catalog):
 
-    ra_diff = np.abs(catalog_ra - ra_in)
-    dec_diff = np.abs(catalog_dec - dec_in)
+    cat_data = optical.read_optical_fnl(catalog)
+    c_ra = cat_data['ra']
+    c_dec = cat_data['dec']
+    c_x = cat_data['x']
+    c_y = cat_data['y']
+
+
+    ra_diff = np.abs(cat_data['ra'] - ra_in)
+    dec_diff = np.abs(cat_data['dec'] - dec_in)
     index_x = np.argmin(ra_diff)
     index_y = np.argmin(dec_diff)
 
-    target_x = catalog_x[index_x]
+    pixels = np.array([cat_data['x'][index_x], cat_data['y'][index_y]])
 
-    target_y = catalog_y[index_y]
-
-    return(target_x, target_y)
+    return pixels
 
 # Convert coordinates in sexagesimal to decimal units
 def hms2deg(ra_h, ra_m, ra_s, dec_d, dec_m, dec_s):
