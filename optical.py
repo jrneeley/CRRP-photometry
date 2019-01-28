@@ -110,14 +110,16 @@ def read_fnl_w_radial_dist(target, center_ra, center_dec, nir=0):
     print "Finished reading catalog."
     return(data, dist)
 
-def read_fnl(target, nir=0):
+def read_fnl(catalog, nir=0):
 
-    catalog = config.optical_dir+target+'.fnl'
+  #  catalog = config.optical_dir+target+'.fnl'
 
     if nir == 0:
-        print "Reading optical catalog for "+target+"..."
+  #      print "Reading optical catalog for "+target+"..."
+	print 'Reading optical catalog...'
     if nir == 1:
-        print 'Reading NIR catalog for '+target+'...'
+   #     print 'Reading NIR catalog for '+target+'...'
+	print 'Reading NIR catalog...'
 
     dtype_opt = np.dtype([('id', int), ('x', float), ('y', float), ('V', float),
         ('Ver', float), ('B', float), ('Ber', float), ('I', float), ('Ier', float),

@@ -5,6 +5,81 @@ import optical
 import config
 
 
+def merge_opt_deep_catalogs2(target):
+
+    opt_file = '{}-mir-fov.fnl'.format(target)
+    opt_data = optical.read_fnl(opt_file)
+
+
+    dtype1 = np.dtype([('id', int), ('3.6', float), ('3.6err', float)])
+    dtype2 = np.dtype([('id', int), ('4.5', float), ('4.5err', float)])
+    print 'Reading MIR catalog for '+target+'...'
+    irac1_file = 'Deepmosaic/I1-deep.cal'
+    irac2_file = 'Deepmosaic/I2-deep.cal'
+    if os.path.isfile(irac1_file) == 0:
+        print 'I1 is uncalibrated!!!'
+        irac1_file = '{}/{}_I1_deep_dn.alf'.format(target, target)
+    if os.path.isfile(irac2_file) == 0:
+        print 'I2 is uncalibrated!!!'
+        irac2_file = '{}/{}_I2_deep_dn.alf'.format(target, target)
+    data3p6 = np.loadtxt(irac1_file, dtype=dtype1, usecols=(0,3,4), skiprows=3)
+    data4p5 = np.loadtxt(irac2_file, dtype=dtype2, usecols=(0,3,4), skiprows=3)
+
+
+
+    mir_data = np.zeros(len(opt_data['id']), dtype=([('3.6', float), ('3.6err', float),
+        ('4.5', float), ('4.5err', float), ('n3.6', int), ('n4.5', int)]))
+    for ind, star in enumerate(opt_data['id']):
+        match3p6 = np.argwhere(data3p6['id'] == star)
+        match4p5 = np.argwhere(data4p5['id'] == star)
+        if len(match3p6) > 0:
+            mir_data['3.6'][ind] = data3p6['3.6'][data3p6['id'] == star]
+            mir_data['3.6err'][ind] = data3p6['3.6err'][data3p6['id'] == star]
+            mir_data['n3.6'][ind] = 1
+        else:
+            mir_data['3.6'][ind] = 99.999
+            mir_data['3.6err'][ind] = 9.9999
+        if len(match4p5) > 0:
+            mir_data['4.5'][ind] = data4p5['4.5'][data4p5['id'] == star]
+            mir_data['4.5err'][ind] = data4p5['4.5err'][data4p5['id'] == star]
+            mir_data['n4.5'][ind] = 1
+        else:
+            mir_data['4.5'][ind] = 99.999
+            mir_data['4.5err'][ind] = 9.9999
+
+
+
+        print 'Writing catalog with optical and MIR data....'
+        # add header
+        head = ' 7 FILTERS:                 U             B             V             R             I           [3.6]         [4.5]           n    n    n    n    n    n    n    chi  sharp |---------- variability ----------|--- RA  (2000)  Dec ----'
+
+        dtype_comb = np.dtype([('id', int), ('x', float), ('y', float), ('U', float),
+            ('Uer', float), ('B', float), ('Ber', float), ('V', float), ('Ver', float),
+            ('R', float), ('Rer', float), ('I', float), ('Ier', float), ('3.6', float),
+            ('3.6er', float), ('4.5', float), ('4.5er', float), ('nU', int),
+            ('nB', int), ('nV', int), ('nR', int), ('nI', int), ('n3.6', int),
+            ('n4.5', int), ('chi', float), ('sharp', float), ('var1', float),
+            ('var2', float), ('var3', float), ('var4', float), ('var5', float),
+            ('ra_h', int), ('ra_m', int), ('ra_s', float),
+            ('dec_d', int), ('dec_m', int), ('dec_s', float), ('rad_dist', float)])
+
+        data_save = np.array(zip(opt_data['id'], opt_data['x'], opt_data['y'],
+            opt_data['U'], opt_data['Uer'], opt_data['B'], opt_data['Ber'],
+            opt_data['V'], opt_data['Ver'], opt_data['R'], opt_data['Rer'],
+            opt_data['I'], opt_data['Ier'], mir_data['3.6'], mir_data['3.6err'],
+            mir_data['4.5'], mir_data['4.5err'], opt_data['nU'], opt_data['nB'],
+            opt_data['nV'], opt_data['nR'], opt_data['nI'], mir_data['n3.6'],
+            mir_data['n4.5'], opt_data['chi'], opt_data['sharp'], opt_data['var1'],
+            opt_data['var2'], opt_data['var3'], opt_data['var4'], opt_data['var5'],
+            opt_data['ra_h'], opt_data['ra_m'], opt_data['ra_s'], opt_data['dec_d'],
+            opt_data['dec_m'], opt_data['dec_s'], rad_dist), dtype=dtype_comb)
+
+        np.savetxt(target+'-merged-catalog.txt', data_save,
+            fmt='%8i %8.2f %8.2f ' + 7*'%6.3f %6.4f ' + 7*'%4i ' + 5*'%6.3f '+'%6.1f %6.3f %3i %02i %05.2f %+03i %02i %04.1f %0.2f',
+            header=head)
+
+
+
 def merge_opt_deep_catalogs(target, cluster_coord=None, opt_name='None'):
 
     if opt_name == 'None': opt_name = target

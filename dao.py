@@ -82,7 +82,7 @@ def daophot(fitsfile, threshold=None, find=1, phot=1, coo_file='',
 
 #print "Initial aperture photometry complete."
 
-def find(fitsfile, num_frames='1,1', coo_file='', opt_file='', verbose=0):
+def find(fitsfile, num_frames='1,1', coo_file='', opt_file='', new_thresh=0, verbose=0):
 
     dao_dir = config.dao_dir
     image = re.sub(".fits","", fitsfile)
@@ -98,6 +98,9 @@ def find(fitsfile, num_frames='1,1', coo_file='', opt_file='', verbose=0):
     daophot.expect('File with parameters')
     daophot.sendline(opt_file)
     daophot.expect('OPT>')
+    if new_thresh > 0:
+        daophot.sendline('th={}'.format(new_thresh))
+        daophot.expect('OPT>')
     daophot.sendline('')
 
 # ATTACH
@@ -414,12 +417,12 @@ def addstar(image, file_stem='fake', num_images = 1, seed=5, gain=999, star_list
 
 
 
-def allstar(fitsfile, new_options=0, verbose=0):
+def allstar(fitsfile, new_options=0, verbose=0, sub_img="", suppress=0):
 
     file_stem = re.sub(".fits","", fitsfile)
 
 ## Running ALLSTAR
-    allstar = pexpect.spawn(config.dao_dir+'allstar', timeout=240)
+    allstar = pexpect.spawn(config.dao_dir+'allstar', timeout=None)
 
     if verbose == 1:
         allstar.logfile = sys.stdout
@@ -445,15 +448,18 @@ def allstar(fitsfile, new_options=0, verbose=0):
     if check == 1:
         allstar.sendline("")
         allstar.expect("Name for subtracted image")
-        allstar.sendline("")
+    #    allstar.sendline(sub_img)
         #print 'made it 1'
-    if check == 0:
-        allstar.sendline("")
-    #print 'made it 2'
-    #allstar.expect("stars")
-    allstar.expect("Good bye")
-    allstar.close(force=True)
-
+    #if check == 0:
+    #    allstar.sendline(sub_img)
+    if suppress == 0:
+        allstar.sendcontrol(sub_img)
+        allstar.expect("Good bye")
+        allstar.close(force=True)
+    if suppress == 1:
+        allstar.sendcontrol("d")
+        allstar.sendcontrol("c")
+        allstar.close(force=True)
 
 # run daomatch on a list of images
 def daomatch(image_list, output_file, verbose=0,

@@ -44,8 +44,10 @@ def find_coord_window_mosaic(img, xy_limits=[0,256,0,256]):
     w = WCS(img)
     r1, d1 = w.wcs_pix2world(xy_limits[0], xy_limits[2], 0)
     r2, d2 = w.wcs_pix2world(xy_limits[0], xy_limits[3], 0)
-    r3, d3 = w.wcs_pix2world(xy_limits[1], xy_limits[2], 0)
-    r4, d4 = w.wcs_pix2world(xy_limits[1], xy_limits[3], 0)
+    r3, d3 = w.wcs_pix2world(xy_limits[1], xy_limits[3], 0)
+    r4, d4 = w.wcs_pix2world(xy_limits[1], xy_limits[2], 0)
+
+    corners = [(r1, d1), (r2, d2), (r3, d3), (r4, d4)]
 
     ra_min = min(r1, r2, r3, r4)
     ra_max = max(r1, r2, r3, r4)
@@ -53,8 +55,8 @@ def find_coord_window_mosaic(img, xy_limits=[0,256,0,256]):
     dec_max = max(d1, d2, d3, d4)
 
     world_limits = np.array([ra_min, ra_max, dec_min, dec_max])
-    #return(bxmin, bxmax, bymin, bymax)
-    return world_limits
+
+    return world_limits, corners
 
 # Convert celestial coordinates to pixels using optical catalog
 def radec2catalogpix(ra_in, dec_in, catalog):
